@@ -2,7 +2,7 @@ import 'dart:math' as math show pi;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:jahiz/features/home/presentation/screans/home_screan.dart';
+import 'package:jahiz/features/onboarding/presentation/screens/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -20,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void initState() {
-    //
+    super.initState();
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -44,7 +44,9 @@ class _SplashScreenState extends State<SplashScreen>
           if (mounted) {
             Navigator.pushReplacement(
               context,
-              CupertinoPageRoute(builder: (context) => HomeScrean()),
+              CupertinoPageRoute(
+                builder: (context) => const OnboardingScreen(),
+              ),
             );
           }
         });
