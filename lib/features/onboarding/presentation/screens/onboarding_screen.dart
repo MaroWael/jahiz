@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:jahiz/core/constants/app_colors.dart';
 import 'package:jahiz/features/home/presentation/screens/home_screan.dart';
@@ -15,6 +16,7 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  static const String _seenOnboardingKey = 'seen_onboarding';
   late PageController _controller;
 
   static const List<Map<String, dynamic>> _pages = [
@@ -60,7 +62,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  void _navigateToHome(BuildContext context) {
+  Future<void> _navigateToHome(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_seenOnboardingKey, true);
+
+    if (!context.mounted) {
+      return;
+    }
+
     Navigator.pushReplacement(
       context,
       CupertinoPageRoute(builder: (_) => const HomeScrean()),
