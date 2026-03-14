@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jahiz/features/auth/presentation/screens/auth_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:jahiz/core/constants/app_colors.dart';
-import 'package:jahiz/features/home/presentation/screens/home_screan.dart';
 import '../cubit/onboarding_cubit.dart';
 import '../widgets/onboarding_item.dart';
 
@@ -72,7 +72,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     Navigator.pushReplacement(
       context,
-      CupertinoPageRoute(builder: (_) => const HomeScrean()),
+      CupertinoPageRoute(builder: (_) => const AuthScreen()),
     );
   }
 

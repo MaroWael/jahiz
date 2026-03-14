@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "646960964581",
+    "project_id": "jahizzz",
+    "storage_bucket": "jahizzz.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:646960964581:android:0dd433c865df43bfd1c50c",
+        "android_client_info": {
+          "package_name": "com.example.jahiz"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "646960964581-4lv9dqh1s3cl78f6e1p34k7pid40i8r5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.jahiz",
+            "certificate_hash": "94bbe996bbdac79e19b9dad9213e583009e25c97"
+          }
+        },
+        {
+          "client_id": "646960964581-6gee37d09gmaf2mbnrms08od5g58utqf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5VUsI7GUKLMLMq8LJG8lbcZbGygGcih0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "646960964581-6gee37d09gmaf2mbnrms08od5g58utqf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "646960964581-1lbaj9qp72rsb9gsaernnfsu08h6md2t.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.jahiz"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

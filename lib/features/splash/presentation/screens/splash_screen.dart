@@ -1,10 +1,15 @@
 import 'dart:math' as math show cos, pi, sin;
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:jahiz/core/services/user_profile_service.dart';
+import 'package:jahiz/features/auth/presentation/screens/auth_screen.dart';
+import 'package:jahiz/features/auth/presentation/screens/email_verification_screen.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:jahiz/features/home/presentation/screens/home_screan.dart';
 import 'package:jahiz/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:jahiz/features/profile_onboarding/presentation/screens/profile_onboarding_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -17,6 +22,7 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   static const String _seenOnboardingKey = 'seen_onboarding';
+  final UserProfileService _userProfileService = UserProfileService();
 
   late final AnimationController _animationController;
   late final Animation<double> _scaleAnimation;
@@ -81,6 +87,27 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _goNext() async {
     final prefs = await SharedPreferences.getInstance();
     final seenOnboarding = prefs.getBool(_seenOnboardingKey) ?? false;
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    Widget destination = const OnboardingScreen();
+
+    if (seenOnboarding) {
+      if (currentUser == null) {
+        destination = const AuthScreen();
+      } else if (!currentUser.emailVerified &&
+          currentUser.providerData.any(
+            (provider) => provider.providerId == 'password',
+          )) {
+        destination = const EmailVerificationScreen();
+      } else {
+        final hasCompleted = await _userProfileService.hasCompletedOnboarding(
+          currentUser.uid,
+        );
+        destination = hasCompleted
+            ? const HomeScrean()
+            : const ProfileOnboardingScreen();
+      }
+    }
 
     await Future<void>.delayed(const Duration(milliseconds: 2600));
     if (!mounted) {
@@ -89,10 +116,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     Navigator.pushReplacement(
       context,
-      CupertinoPageRoute(
-        builder: (_) =>
-            seenOnboarding ? const HomeScrean() : const OnboardingScreen(),
-      ),
+      CupertinoPageRoute(builder: (_) => destination),
     );
   }
 
