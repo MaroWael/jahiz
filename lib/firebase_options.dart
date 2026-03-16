@@ -64,6 +64,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '646960964581',
     projectId: 'jahizzz',
     storageBucket: 'jahizzz.firebasestorage.app',
+    androidClientId: '646960964581-4lv9dqh1s3cl78f6e1p34k7pid40i8r5.apps.googleusercontent.com',
+    iosClientId: '646960964581-1lbaj9qp72rsb9gsaernnfsu08h6md2t.apps.googleusercontent.com',
     iosBundleId: 'com.example.jahiz',
   );
 
@@ -73,6 +75,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '646960964581',
     projectId: 'jahizzz',
     storageBucket: 'jahizzz.firebasestorage.app',
+    androidClientId: '646960964581-4lv9dqh1s3cl78f6e1p34k7pid40i8r5.apps.googleusercontent.com',
+    iosClientId: '646960964581-1lbaj9qp72rsb9gsaernnfsu08h6md2t.apps.googleusercontent.com',
     iosBundleId: 'com.example.jahiz',
   );
 
@@ -85,4 +89,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'jahizzz.firebasestorage.app',
     measurementId: 'G-6N9925SGJ1',
   );
+
 }
