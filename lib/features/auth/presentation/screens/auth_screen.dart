@@ -282,6 +282,42 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                   validator: _validatePassword,
                 ),
+                if (!_isRegisterMode)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () async {
+                              final email = _emailController.text.trim();
+                              if (email.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please enter your email'),
+                                  ),
+                                );
+                                return;
+                              }
+                              try {
+                                await _authService.sendPasswordResetEmail(
+                                  email: email,
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Password reset email sent.\nCheck your Spam folder.',
+                                    ),
+                                  ),
+                                );
+                              } on FirebaseAuthException catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(e.message ?? "Error")),
+                                );
+                              }
+                            },
+                      child: const Text('Forgot Password?'),
+                    ),
+                  ),
                 if (_isRegisterMode) ...[
                   const SizedBox(height: 14),
                   TextFormField(
@@ -365,7 +401,14 @@ class _AuthScreenState extends State<AuthScreen> {
                   onPressed: _isLoading
                       ? null
                       : () {
-                          setState(() => _isRegisterMode = !_isRegisterMode);
+                          setState(() { // solve the bug of form state not resetting when switching modes
+                            _isRegisterMode = !_isRegisterMode;
+                            _emailController.clear();
+                            _passwordController.clear();
+                            _confirmPasswordController.clear();
+                            _fullNameController.clear();
+                            _formKey.currentState?.reset();
+                          });
                         },
                   child: Text(
                     _isRegisterMode
