@@ -13,6 +13,7 @@ class HomeState {
     this.notificationCount = 0,
     this.sessionSummary,
     this.activeTabIndex = 0,
+    this.popularRoles = const <String>[],
   });
 
   final bool isLoading;
@@ -25,23 +26,15 @@ class HomeState {
   final int notificationCount;
   final SessionSummary? sessionSummary;
   final int activeTabIndex;
-
-  List<String> get roles {
-    return const <String>[
-      'Frontend Developer',
-      'Backend Engineer',
-      'Mobile Developer',
-      'Data Analyst',
-      'DevOps Engineer',
-    ];
-  }
+  final List<String> popularRoles;
 
   List<String> get filteredRoles {
+    final source = popularRoles;
     if (searchQuery.trim().isEmpty) {
-      return roles;
+      return source;
     }
 
-    return roles
+    return source
         .where((role) => role.toLowerCase().contains(searchQuery.toLowerCase()))
         .toList();
   }
@@ -57,6 +50,7 @@ class HomeState {
     int? notificationCount,
     SessionSummary? sessionSummary,
     int? activeTabIndex,
+    List<String>? popularRoles,
     bool clearError = false,
   }) {
     return HomeState(
@@ -70,6 +64,7 @@ class HomeState {
       notificationCount: notificationCount ?? this.notificationCount,
       sessionSummary: sessionSummary ?? this.sessionSummary,
       activeTabIndex: activeTabIndex ?? this.activeTabIndex,
+      popularRoles: popularRoles ?? this.popularRoles,
     );
   }
 }

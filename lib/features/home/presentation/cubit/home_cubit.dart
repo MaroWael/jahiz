@@ -27,6 +27,12 @@ class HomeCubit extends Cubit<HomeState> {
       final selectedRole = await _localStorageService.getSelectedRole();
       final activeRole = selectedRole ?? user.role;
 
+      final popularRoles = await _questionService.getPopularRoles(
+        currentRole: user.role,
+        level: user.level,
+        techStack: user.techStack,
+      );
+
       final question = await _questionService.getDailyQuestion(
         role: activeRole,
         level: user.level,
@@ -42,6 +48,7 @@ class HomeCubit extends Cubit<HomeState> {
           dailyQuestion: question,
           notificationCount: 3,
           sessionSummary: SessionSummary(score: 82, streak: 5),
+          popularRoles: popularRoles,
         ),
       );
     } catch (_) {

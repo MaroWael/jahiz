@@ -14,6 +14,51 @@ class QuestionService {
   final AIService _aiService;
   final LocalStorageService _localStorageService;
 
+  Future<List<String>> getPopularRoles({
+    required String currentRole,
+    required String level,
+    required List<String> techStack,
+  }) async {
+    try {
+      final roles = await _aiService.generatePopularRoles(
+        currentRole: currentRole,
+        level: level,
+        techStack: techStack,
+      );
+
+      if (roles.isNotEmpty) {
+        return roles;
+      }
+    } catch (_) {
+      // Fall back to personalized local suggestions when Gemini is unavailable.
+    }
+
+    return _buildPersonalizedRoleFallback(
+      currentRole: currentRole,
+      techStack: techStack,
+    );
+  }
+
+  List<String> _buildPersonalizedRoleFallback({
+    required String currentRole,
+    required List<String> techStack,
+  }) {
+    final normalizedRole = currentRole.trim();
+    final firstStack = techStack.isNotEmpty ? techStack.first.trim() : '';
+    final stackLabel = firstStack.isEmpty ? 'Software' : firstStack;
+
+    final suggestions = <String>{
+      if (normalizedRole.isNotEmpty) normalizedRole,
+      '$stackLabel Developer',
+      '$stackLabel Engineer',
+      'Senior $stackLabel Developer',
+      'Full Stack Developer',
+      'Software Engineer',
+    };
+
+    return suggestions.where((item) => item.trim().isNotEmpty).take(5).toList();
+  }
+
   Future<String> getDailyQuestion({
     required String role,
     required String level,
