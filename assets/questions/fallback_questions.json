@@ -1,0 +1,15 @@
+{
+  "frontend": [
+    "Explain virtual DOM",
+    "What is closure?"
+  ],
+  "backend": [
+    "Explain REST vs GraphQL"
+  ],
+  "react": [
+    "How does React reconciliation work internally?"
+  ],
+  "node.js": [
+    "How do you handle async errors in Node.js services?"
+  ]
+}

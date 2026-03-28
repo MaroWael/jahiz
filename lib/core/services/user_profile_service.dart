@@ -10,6 +10,10 @@ class UserProfileService {
     return _firestore.collection('users').doc(uid);
   }
 
+  Future<DocumentSnapshot<Map<String, dynamic>>> getUserDocument(String uid) {
+    return _userRef(uid).get();
+  }
+
   Future<bool> hasCompletedOnboarding(String uid) async {
     final snapshot = await _userRef(uid).get();
     if (!snapshot.exists) {
