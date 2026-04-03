@@ -135,21 +135,18 @@ class QuestionService {
     required List<String> techStack,
     int count = 5,
   }) async {
-    try {
-      final generated = await _aiService.generatePracticeQuestions(
-        role: role,
-        level: level,
-        techStack: techStack,
-        count: count,
-      );
-      if (generated.isNotEmpty) {
-        return generated;
-      }
-    } catch (_) {
-      // Fall back to local sample questions if Gemini is unavailable.
+    final generated = await _aiService.generatePracticeQuestions(
+      role: role,
+      level: level,
+      techStack: techStack,
+      count: count,
+    );
+
+    if (generated.isEmpty) {
+      throw Exception('No practice questions returned from Gemini.');
     }
 
-    return _buildFallbackPracticeQuestions(techStack: techStack, count: count);
+    return generated;
   }
 
   Future<PracticeEvaluation> evaluatePracticeAnswer({
@@ -159,23 +156,13 @@ class QuestionService {
     required String question,
     required String answer,
   }) async {
-    try {
-      return await _aiService.evaluateAnswer(
-        role: role,
-        level: level,
-        techStack: techStack,
-        question: question,
-        answer: answer,
-      );
-    } catch (_) {
-      return PracticeEvaluation(
-        score: 6,
-        feedback:
-            'Your answer has a good start but can be more structured. Explain the context, your technical decision, trade-offs, and measurable impact.',
-        modelAnswer:
-            'A strong answer should state the problem, your approach, key technologies used, trade-offs considered, and the final impact in production.',
-      );
-    }
+    return _aiService.evaluateAnswer(
+      role: role,
+      level: level,
+      techStack: techStack,
+      question: question,
+      answer: answer,
+    );
   }
 
   Future<List<String>> _buildFallbackPracticeQuestions({
