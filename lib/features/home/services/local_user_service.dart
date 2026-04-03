@@ -10,6 +10,8 @@ class LocalUserService {
   final FirebaseAuth _auth;
   final UserProfileService _userProfileService;
 
+  User? get authenticatedUser => _auth.currentUser;
+
   Future<HomeUser> getCurrentUser() async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) {

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jahiz/features/home/models/home_user.dart';
 import 'package:jahiz/features/home/services/local_storage_service.dart';
@@ -60,6 +61,8 @@ class PracticeCubit extends Cubit<PracticeState> {
           currentIndex: 0,
           answers: const <int, String>{},
           evaluations: const <int, PracticeEvaluation>{},
+          isSessionSubmitted: false,
+          isSessionSubmitting: false,
           isTimeout: false,
           clearError: true,
         ),
@@ -72,12 +75,12 @@ class PracticeCubit extends Cubit<PracticeState> {
           errorMessage: 'Request timed out while loading questions.',
         ),
       );
-    } catch (_) {
+    } catch (error) {
       emit(
         state.copyWith(
           isLoadingQuestions: false,
           isTimeout: false,
-          errorMessage: 'Unable to load practice questions right now.',
+          errorMessage: 'Unable to load practice questions: $error',
         ),
       );
     }
@@ -149,6 +152,8 @@ class PracticeCubit extends Cubit<PracticeState> {
         currentIndex: currentIndex.clamp(0, rawQuestions.length - 1),
         answers: answers,
         evaluations: evaluations,
+        isSessionSubmitted: saved['sessionSubmitted'] == true,
+        isSessionSubmitting: false,
         isTimeout: false,
         clearError: true,
       ),
@@ -160,12 +165,7 @@ class PracticeCubit extends Cubit<PracticeState> {
   void updateCurrentAnswer(String value) {
     final updated = Map<int, String>.from(state.answers);
     updated[state.currentIndex] = value;
-    emit(
-      state.copyWith(
-        answers: updated,
-        clearValidationError: true,
-      ),
-    );
+    emit(state.copyWith(answers: updated, clearValidationError: true));
   }
 
   Future<void> submitCurrentAnswer() async {
@@ -174,13 +174,16 @@ class PracticeCubit extends Cubit<PracticeState> {
       return;
     }
 
+    if (state.isCurrentSubmitted) {
+      emit(
+        state.copyWith(validationError: 'This question is already submitted.'),
+      );
+      return;
+    }
+
     final answer = state.currentAnswer.trim();
     if (answer.isEmpty) {
-      emit(
-        state.copyWith(
-          validationError: 'Answer cannot be empty.',
-        ),
-      );
+      emit(state.copyWith(validationError: 'Answer cannot be empty.'));
       return;
     }
 
@@ -216,27 +219,21 @@ class PracticeCubit extends Cubit<PracticeState> {
       final updated = Map<int, PracticeEvaluation>.from(state.evaluations);
       updated[state.currentIndex] = evaluation;
 
-      emit(
-        state.copyWith(
-          isSubmitting: false,
-          evaluations: updated,
-        ),
-      );
+      emit(state.copyWith(isSubmitting: false, evaluations: updated));
 
       await saveProgress();
     } on TimeoutException {
       emit(
         state.copyWith(
           isSubmitting: false,
-          errorMessage:
-              'AI evaluation timed out. Please retry in a moment.',
+          errorMessage: 'AI evaluation timed out. Please retry in a moment.',
         ),
       );
-    } catch (_) {
+    } catch (error) {
       emit(
         state.copyWith(
           isSubmitting: false,
-          errorMessage: 'Failed to evaluate your answer. Please retry.',
+          errorMessage: 'Failed to evaluate your answer: $error',
         ),
       );
     }
@@ -302,10 +299,137 @@ class PracticeCubit extends Cubit<PracticeState> {
       'currentIndex': state.currentIndex,
       'answers': serializedAnswers,
       'evaluations': serializedEvaluations,
+      'sessionSubmitted': state.isSessionSubmitted,
     });
+  }
+
+  Future<bool> submitSession() async {
+    if (!state.hasQuestions) {
+      return false;
+    }
+
+    if (!state.canSubmitSession) {
+      emit(
+        state.copyWith(
+          errorMessage:
+              'Submit all questions first (${state.submittedAnswersCount}/${state.questions.length}).',
+        ),
+      );
+      return false;
+    }
+
+    if (state.isSessionSubmitted) {
+      return true;
+    }
+
+    emit(
+      state.copyWith(
+        isSessionSubmitting: true,
+        clearError: true,
+        clearValidationError: true,
+      ),
+    );
+
+    try {
+      await Future<void>.delayed(const Duration(milliseconds: 450));
+
+      final currentUser = _localUserService.authenticatedUser;
+      if (currentUser == null) {
+        throw StateError('No authenticated user found.');
+      }
+
+      final user = state.user;
+      if (user == null) {
+        throw StateError('User profile is not loaded.');
+      }
+
+      await _saveCompletedSession(uid: currentUser.uid, user: user);
+
+      emit(
+        state.copyWith(isSessionSubmitting: false, isSessionSubmitted: true),
+      );
+
+      await saveProgress();
+      await _localStorageService.clearPracticeProgress();
+      return true;
+    } catch (error) {
+      emit(
+        state.copyWith(
+          isSessionSubmitting: false,
+          errorMessage: 'Failed to submit session: $error',
+        ),
+      );
+      return false;
+    }
   }
 
   Future<void> discardProgress() async {
     await _localStorageService.clearPracticeProgress();
+  }
+
+  Future<void> _saveCompletedSession({
+    required String uid,
+    required HomeUser user,
+  }) async {
+    final firestore = FirebaseFirestore.instance;
+    final sessionRef = firestore
+        .collection('users')
+        .doc(uid)
+        .collection('practiceSessions')
+        .doc();
+
+    final now = DateTime.now().toUtc();
+    final questionResults = <Map<String, dynamic>>[];
+
+    for (var i = 0; i < state.questions.length; i++) {
+      final evaluation = state.evaluations[i];
+      if (evaluation == null) {
+        continue;
+      }
+
+      final question = state.questions[i];
+      questionResults.add(<String, dynamic>{
+        'questionIndex': i,
+        'question': question,
+        'answer': (state.answers[i] ?? '').trim(),
+        'score': evaluation.score,
+        'scorePercent': (evaluation.score * 10).clamp(0, 100).toDouble(),
+        'feedback': evaluation.feedback,
+        'modelAnswer': evaluation.modelAnswer,
+        'topic': _inferTopic(question: question, techStack: user.techStack),
+      });
+    }
+
+    await sessionRef.set(<String, dynamic>{
+      'role': user.role,
+      'level': user.level,
+      'techStack': user.techStack,
+      'totalQuestions': state.questions.length,
+      'answeredQuestions': questionResults.length,
+      'averageScore': state.averageScore,
+      'averageScorePercent': (state.averageScore * 10).clamp(0, 100).toDouble(),
+      'questionResults': questionResults,
+      'createdAt': FieldValue.serverTimestamp(),
+      'createdAtClient': Timestamp.fromDate(now),
+    });
+  }
+
+  String _inferTopic({
+    required String question,
+    required List<String> techStack,
+  }) {
+    final normalizedQuestion = question.toLowerCase();
+
+    for (final topic in techStack) {
+      final normalizedTopic = topic.trim().toLowerCase();
+      if (normalizedTopic.isEmpty) {
+        continue;
+      }
+      if (normalizedQuestion.contains(normalizedTopic)) {
+        return topic;
+      }
+    }
+
+    return techStack.isNotEmpty ? techStack.first : 'General';
   }
 }
