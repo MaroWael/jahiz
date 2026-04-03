@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/services.dart';
+import 'package:jahiz/features/practice/models/practice_evaluation.dart';
 import 'package:jahiz/features/home/services/ai_service.dart';
 import 'package:jahiz/features/home/services/local_storage_service.dart';
 
@@ -125,5 +127,89 @@ class QuestionService {
     final a = first.toLocal();
     final b = second.toLocal();
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Future<List<String>> getPracticeQuestions({
+    required String role,
+    required String level,
+    required List<String> techStack,
+    int count = 5,
+  }) async {
+    try {
+      final generated = await _aiService.generatePracticeQuestions(
+        role: role,
+        level: level,
+        techStack: techStack,
+        count: count,
+      );
+      if (generated.isNotEmpty) {
+        return generated;
+      }
+    } catch (_) {
+      // Fall back to local sample questions if Gemini is unavailable.
+    }
+
+    return _buildFallbackPracticeQuestions(techStack: techStack, count: count);
+  }
+
+  Future<PracticeEvaluation> evaluatePracticeAnswer({
+    required String role,
+    required String level,
+    required List<String> techStack,
+    required String question,
+    required String answer,
+  }) async {
+    try {
+      return await _aiService.evaluateAnswer(
+        role: role,
+        level: level,
+        techStack: techStack,
+        question: question,
+        answer: answer,
+      );
+    } catch (_) {
+      return PracticeEvaluation(
+        score: 6,
+        feedback:
+            'Your answer has a good start but can be more structured. Explain the context, your technical decision, trade-offs, and measurable impact.',
+        modelAnswer:
+            'A strong answer should state the problem, your approach, key technologies used, trade-offs considered, and the final impact in production.',
+      );
+    }
+  }
+
+  Future<List<String>> _buildFallbackPracticeQuestions({
+    required List<String> techStack,
+    required int count,
+  }) async {
+    final raw = await rootBundle.loadString(
+      'assets/questions/fallback_questions.json',
+    );
+    final decoded = jsonDecode(raw) as Map<String, dynamic>;
+
+    final aggregate = <String>[];
+    final keys = techStack.map((item) => item.toLowerCase()).toList();
+    for (final key in keys) {
+      final values = decoded[key];
+      if (values is List) {
+        aggregate.addAll(values.map((item) => item.toString()));
+      }
+    }
+
+    final frontend = decoded['frontend'];
+    if (frontend is List) {
+      aggregate.addAll(frontend.map((item) => item.toString()));
+    }
+
+    if (aggregate.isEmpty) {
+      aggregate.addAll(<String>[
+        'Walk me through a project where you handled a technical trade-off.',
+        'How do you debug a production issue under time pressure?',
+        'How do you design a scalable feature from scratch?',
+      ]);
+    }
+
+    aggregate.shuffle(Random());
+    return aggregate.take(count).toList();
   }
 }
