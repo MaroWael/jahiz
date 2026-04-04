@@ -4,20 +4,25 @@ import 'package:jahiz/features/home/presentation/cubit/home_state.dart';
 import 'package:jahiz/features/home/services/local_storage_service.dart';
 import 'package:jahiz/features/home/services/local_user_service.dart';
 import 'package:jahiz/features/home/services/question_service.dart';
+import 'package:jahiz/features/home/services/session_summary_service.dart';
 
 class HomeCubit extends Cubit<HomeState> {
   HomeCubit({
     LocalUserService? localUserService,
     QuestionService? questionService,
     LocalStorageService? localStorageService,
+    SessionSummaryService? sessionSummaryService,
   }) : _localUserService = localUserService ?? LocalUserService(),
        _questionService = questionService ?? QuestionService(),
        _localStorageService = localStorageService ?? LocalStorageService(),
+       _sessionSummaryService =
+           sessionSummaryService ?? SessionSummaryService(),
        super(const HomeState());
 
   final LocalUserService _localUserService;
   final QuestionService _questionService;
   final LocalStorageService _localStorageService;
+  final SessionSummaryService _sessionSummaryService;
 
   Future<void> initialize() async {
     emit(state.copyWith(isLoading: true, clearError: true));
@@ -36,10 +41,16 @@ class HomeCubit extends Cubit<HomeState> {
       final allRoles = _questionService.getLatestRolePool();
 
       final question = await _questionService.getDailyQuestion(
-        role: activeRole?? user.role,
+        role: activeRole ?? user.role,
         level: user.level,
         techStack: user.techStack,
       );
+      SessionSummary? sessionSummary;
+      try {
+        sessionSummary = await _sessionSummaryService.getLastSessionSummary();
+      } catch (_) {
+        sessionSummary = null;
+      }
 
       emit(
         state.copyWith(
@@ -48,11 +59,11 @@ class HomeCubit extends Cubit<HomeState> {
           selectedRole: activeRole,
           searchQuery: '',
           coachMessage: activeRole == null
-            ? 'Choose a role to start practicing'
-            : 'Ready to practice for your $activeRole interview?',
+              ? 'Choose a role to start practicing'
+              : 'Ready to practice for your $activeRole interview?',
           dailyQuestion: question,
           notificationCount: 3,
-          sessionSummary: SessionSummary(score: 82, streak: 5),
+          sessionSummary: sessionSummary,
           popularRoles: popularRoles,
           allRoles: allRoles,
         ),

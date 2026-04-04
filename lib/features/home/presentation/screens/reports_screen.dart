@@ -1,6 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:jahiz/features/home/models/reports_overview.dart';
+import 'package:jahiz/features/home/services/reports_service.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -10,7 +10,8 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  late Future<_ReportsMetrics> _metricsFuture;
+  final ReportsService _reportsService = ReportsService();
+  late Future<ReportsOverview> _metricsFuture;
 
   @override
   void initState() {
@@ -25,58 +26,49 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await _metricsFuture;
   }
 
-  Future<_ReportsMetrics> _loadMetrics() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      return const _ReportsMetrics(averageScorePercent: null, sessionCount: 0);
-    }
-
-    final snapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('practiceSessions')
-        .get();
-
-    if (snapshot.docs.isEmpty) {
-      return const _ReportsMetrics(averageScorePercent: null, sessionCount: 0);
-    }
-
-    var totalScorePercent = 0.0;
-    var countedSessions = 0;
-
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      final scorePercent = _readScorePercent(data);
-      if (scorePercent == null) {
-        continue;
-      }
-
-      totalScorePercent += scorePercent.clamp(0, 100).toDouble();
-      countedSessions += 1;
-    }
-
-    if (countedSessions == 0) {
-      return const _ReportsMetrics(averageScorePercent: null, sessionCount: 0);
-    }
-
-    return _ReportsMetrics(
-      averageScorePercent: totalScorePercent / countedSessions,
-      sessionCount: countedSessions,
-    );
+  Future<ReportsOverview> _loadMetrics() async {
+    return _reportsService.getReportsOverview();
   }
 
-  double? _readScorePercent(Map<String, dynamic> data) {
-    final direct = data['averageScorePercent'];
-    if (direct is num) {
-      return direct.toDouble();
+  String _formatDate(DateTime? date) {
+    if (date == null) {
+      return 'Unknown date';
     }
 
-    final averageScore = data['averageScore'];
-    if (averageScore is num) {
-      return averageScore.toDouble() * 10;
-    }
+    final local = date.toLocal();
+    final month = _monthName(local.month);
+    return '$month ${local.day}, ${local.year}';
+  }
 
-    return null;
+  String _monthName(int month) {
+    switch (month) {
+      case 1:
+        return 'Jan';
+      case 2:
+        return 'Feb';
+      case 3:
+        return 'Mar';
+      case 4:
+        return 'Apr';
+      case 5:
+        return 'May';
+      case 6:
+        return 'Jun';
+      case 7:
+        return 'Jul';
+      case 8:
+        return 'Aug';
+      case 9:
+        return 'Sep';
+      case 10:
+        return 'Oct';
+      case 11:
+        return 'Nov';
+      case 12:
+        return 'Dec';
+      default:
+        return '';
+    }
   }
 
   @override
@@ -86,7 +78,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       appBar: AppBar(title: const Text('Reports')),
       body: RefreshIndicator(
         onRefresh: _refresh,
-        child: FutureBuilder<_ReportsMetrics>(
+        child: FutureBuilder<ReportsOverview>(
           future: _metricsFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -107,9 +99,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
             final metrics =
                 snapshot.data ??
-                const _ReportsMetrics(
+                const ReportsOverview(
                   averageScorePercent: null,
                   sessionCount: 0,
+                  sessions: [],
                 );
 
             return ListView(
@@ -166,6 +159,51 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       'Complete at least one practice session to see reports.',
                     ),
                   ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Completed Sessions',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 10),
+                if (metrics.sessions.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: const Text('No completed sessions yet.'),
+                  )
+                else
+                  ...metrics.sessions.map(
+                    (session) => Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _formatDate(session.date),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${session.scorePercent.toStringAsFixed(1)}%',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             );
           },
@@ -173,14 +211,4 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
     );
   }
-}
-
-class _ReportsMetrics {
-  const _ReportsMetrics({
-    required this.averageScorePercent,
-    required this.sessionCount,
-  });
-
-  final double? averageScorePercent;
-  final int sessionCount;
 }
