@@ -24,17 +24,19 @@ class HomeCubit extends Cubit<HomeState> {
 
     try {
       final user = await _localUserService.getCurrentUser();
+      await _localStorageService.clearSelectedRole();
       final selectedRole = await _localStorageService.getSelectedRole();
-      final activeRole = selectedRole ?? user.role;
+      final activeRole = selectedRole;
 
       final popularRoles = await _questionService.getPopularRoles(
         currentRole: user.role,
         level: user.level,
         techStack: user.techStack,
       );
+      final allRoles = _questionService.getLatestRolePool();
 
       final question = await _questionService.getDailyQuestion(
-        role: activeRole,
+        role: activeRole?? user.role,
         level: user.level,
         techStack: user.techStack,
       );
@@ -44,11 +46,15 @@ class HomeCubit extends Cubit<HomeState> {
           isLoading: false,
           user: user,
           selectedRole: activeRole,
-          coachMessage: 'Ready to practice for your $activeRole interview?',
+          searchQuery: '',
+          coachMessage: activeRole == null
+            ? 'Choose a role to start practicing'
+            : 'Ready to practice for your $activeRole interview?',
           dailyQuestion: question,
           notificationCount: 3,
           sessionSummary: SessionSummary(score: 82, streak: 5),
           popularRoles: popularRoles,
+          allRoles: allRoles,
         ),
       );
     } catch (_) {
@@ -95,8 +101,17 @@ class HomeCubit extends Cubit<HomeState> {
     }
   }
 
-  void updateSearchQuery(String query) {
-    emit(state.copyWith(searchQuery: query));
+  Future<void> updateSearchQuery(String query) async {
+    await _localStorageService.clearSelectedRole();
+    final cachedPool = _questionService.getLatestRolePool();
+
+    emit(
+      state.copyWith(
+        searchQuery: query,
+        selectedRole: null,
+        allRoles: cachedPool,
+      ),
+    );
   }
 
   void updateTabIndex(int index) {

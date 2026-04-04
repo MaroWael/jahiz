@@ -1,6 +1,8 @@
 import 'package:jahiz/features/home/models/home_user.dart';
 import 'package:jahiz/features/home/models/session_summary.dart';
 
+const _nullSelectedRole = Object();
+
 class HomeState {
   const HomeState({
     this.isLoading = false,
@@ -14,6 +16,7 @@ class HomeState {
     this.sessionSummary,
     this.activeTabIndex = 0,
     this.popularRoles = const <String>[],
+    this.allRoles = const <String>[],
   });
 
   final bool isLoading;
@@ -27,9 +30,10 @@ class HomeState {
   final SessionSummary? sessionSummary;
   final int activeTabIndex;
   final List<String> popularRoles;
+  final List<String> allRoles;
 
   List<String> get filteredRoles {
-    final source = popularRoles;
+    final source = searchQuery.trim().isEmpty ? popularRoles : allRoles;
     if (searchQuery.trim().isEmpty) {
       return source;
     }
@@ -45,12 +49,13 @@ class HomeState {
     String? coachMessage,
     String? dailyQuestion,
     String? errorMessage,
-    String? selectedRole,
+    Object? selectedRole = _nullSelectedRole,
     String? searchQuery,
     int? notificationCount,
     SessionSummary? sessionSummary,
     int? activeTabIndex,
     List<String>? popularRoles,
+    List<String>? allRoles,
     bool clearError = false,
   }) {
     return HomeState(
@@ -59,12 +64,15 @@ class HomeState {
       coachMessage: coachMessage ?? this.coachMessage,
       dailyQuestion: dailyQuestion ?? this.dailyQuestion,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      selectedRole: selectedRole ?? this.selectedRole,
+      selectedRole: selectedRole == _nullSelectedRole
+          ? this.selectedRole
+          : selectedRole as String?,
       searchQuery: searchQuery ?? this.searchQuery,
       notificationCount: notificationCount ?? this.notificationCount,
       sessionSummary: sessionSummary ?? this.sessionSummary,
       activeTabIndex: activeTabIndex ?? this.activeTabIndex,
       popularRoles: popularRoles ?? this.popularRoles,
+      allRoles: allRoles ?? this.allRoles,
     );
   }
 }

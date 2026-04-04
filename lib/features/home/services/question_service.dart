@@ -15,50 +15,142 @@ class QuestionService {
 
   final AIService _aiService;
   final LocalStorageService _localStorageService;
+  int _roleRotationStart = 0;
+  List<String> _latestRolePool = const <String>[];
+  static const int _rolesPerRefresh = 6;
+
+  static const List<String> _realJobRolePool = <String>[
+    'Frontend Developer',
+    'Backend Developer',
+    'Full Stack Developer',
+    'Mobile Developer',
+    'DevOps Engineer',
+    'Cybersecurity Engineer',
+    'Data Engineer',
+    'QA Engineer',
+    'Cloud Engineer',
+    'Site Reliability Engineer',
+    'Platform Engineer',
+    'Machine Learning Engineer',
+    'Data Scientist',
+    'AI Engineer',
+    'Product Manager',
+    'Technical Product Manager',
+    'Business Analyst',
+    'Systems Analyst',
+    'UI Designer',
+    'UX Designer',
+    'UI/UX Designer',
+    'Solutions Architect',
+    'Software Architect',
+    'Network Engineer',
+    'Security Analyst',
+    'Security Operations Engineer',
+    'Penetration Tester',
+    'Cloud Security Engineer',
+    'Database Administrator',
+    'Data Analyst',
+    'BI Developer',
+    'Game Developer',
+    'Embedded Systems Engineer',
+    'IoT Engineer',
+    'AR/VR Developer',
+    'Android Developer',
+    'iOS Developer',
+    'Flutter Developer',
+    'React Developer',
+    'Node.js Developer',
+    'Java Developer',
+    'Python Developer',
+    'Go Developer',
+    '.NET Developer',
+    'PHP Developer',
+    'Ruby on Rails Developer',
+    'Blockchain Developer',
+    'ERP Consultant',
+    'Salesforce Developer',
+    'SAP Consultant',
+    'MLOps Engineer',
+    'Prompt Engineer',
+  ];
 
   Future<List<String>> getPopularRoles({
     required String currentRole,
     required String level,
     required List<String> techStack,
   }) async {
+    var generatedRoles = <String>[];
+
     try {
-      final roles = await _aiService.generatePopularRoles(
+      generatedRoles = await _aiService.generatePopularRoles(
         currentRole: currentRole,
         level: level,
         techStack: techStack,
       );
-
-      if (roles.isNotEmpty) {
-        return roles;
-      }
     } catch (_) {
       // Fall back to personalized local suggestions when Gemini is unavailable.
     }
 
-    return _buildPersonalizedRoleFallback(
+    final rolePool = _buildRolePool(
       currentRole: currentRole,
       techStack: techStack,
+      generatedRoles: generatedRoles,
     );
+    _latestRolePool = rolePool;
+
+    return _nextRoleWindow(rolePool);
   }
 
-  List<String> _buildPersonalizedRoleFallback({
+  List<String> getLatestRolePool() {
+    if (_latestRolePool.isNotEmpty) {
+      return List<String>.from(_latestRolePool);
+    }
+
+    return List<String>.from(_realJobRolePool);
+  }
+
+  List<String> _buildRolePool({
     required String currentRole,
     required List<String> techStack,
+    required List<String> generatedRoles,
   }) {
-    final normalizedRole = currentRole.trim();
-    final firstStack = techStack.isNotEmpty ? techStack.first.trim() : '';
-    final stackLabel = firstStack.isEmpty ? 'Software' : firstStack;
+    final stackHints = techStack
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .map((item) => '$item Developer');
 
-    final suggestions = <String>{
-      if (normalizedRole.isNotEmpty) normalizedRole,
-      '$stackLabel Developer',
-      '$stackLabel Engineer',
-      'Senior $stackLabel Developer',
-      'Full Stack Developer',
-      'Software Engineer',
+    final merged = <String>{
+      if (currentRole.trim().isNotEmpty) currentRole.trim(),
+      ...generatedRoles
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty),
+      ...stackHints,
+      ..._realJobRolePool,
     };
 
-    return suggestions.where((item) => item.trim().isNotEmpty).take(5).toList();
+    return merged.toList();
+  }
+
+  List<String> _nextRoleWindow(List<String> rolePool) {
+    if (rolePool.isEmpty) {
+      return <String>[];
+    }
+
+    if (rolePool.length <= _rolesPerRefresh) {
+      return rolePool;
+    }
+
+    final start = _roleRotationStart % rolePool.length;
+    final window = <String>[];
+
+    for (var i = 0; i < _rolesPerRefresh; i++) {
+      window.add(rolePool[(start + i) % rolePool.length]);
+    }
+
+    _roleRotationStart =
+        (_roleRotationStart + _rolesPerRefresh) % rolePool.length;
+
+    return window;
   }
 
   Future<String> getDailyQuestion({
