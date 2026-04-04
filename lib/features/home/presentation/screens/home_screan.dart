@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:jahiz/core/services/auth_service.dart';
 import 'package:jahiz/features/auth/presentation/screens/auth_screen.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_cubit.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_state.dart';
@@ -14,7 +13,6 @@ class HomeScrean extends StatefulWidget {
 
 class _HomeScreanState extends State<HomeScrean> {
   final HomeCubit _homeCubit = HomeCubit();
-  final AuthService _authService = AuthService();
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -57,8 +55,8 @@ class _HomeScreanState extends State<HomeScrean> {
   }
 
   Future<void> _logout() async {
-    await _authService.signOut();
-    if (!mounted) {
+    final didSignOut = await _homeCubit.signOut();
+    if (!didSignOut || !mounted) {
       return;
     }
 

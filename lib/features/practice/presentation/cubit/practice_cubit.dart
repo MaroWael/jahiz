@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jahiz/features/home/models/home_user.dart';
 import 'package:jahiz/features/home/services/local_storage_service.dart';
 import 'package:jahiz/features/home/services/local_user_service.dart';
 import 'package:jahiz/features/home/services/question_service.dart';
 import 'package:jahiz/features/practice/models/practice_evaluation.dart';
+import 'package:jahiz/features/practice/services/practice_session_submission_service.dart';
 import 'package:jahiz/features/practice/presentation/cubit/practice_state.dart';
 
 class PracticeCubit extends Cubit<PracticeState> {
@@ -14,9 +14,13 @@ class PracticeCubit extends Cubit<PracticeState> {
     LocalUserService? localUserService,
     QuestionService? questionService,
     LocalStorageService? localStorageService,
+    PracticeSessionSubmissionService? practiceSessionSubmissionService,
   }) : _localUserService = localUserService ?? LocalUserService(),
        _questionService = questionService ?? QuestionService(),
        _localStorageService = localStorageService ?? LocalStorageService(),
+       _practiceSessionSubmissionService =
+           practiceSessionSubmissionService ??
+           PracticeSessionSubmissionService(),
        super(const PracticeState());
 
   static const int minCharacters = 40;
@@ -24,6 +28,7 @@ class PracticeCubit extends Cubit<PracticeState> {
   final LocalUserService _localUserService;
   final QuestionService _questionService;
   final LocalStorageService _localStorageService;
+  final PracticeSessionSubmissionService _practiceSessionSubmissionService;
 
   Future<void> initialize({bool forceRefresh = false}) async {
     emit(
@@ -356,7 +361,20 @@ class PracticeCubit extends Cubit<PracticeState> {
         throw StateError('User profile is not loaded.');
       }
 
-      await _saveCompletedSession(uid: currentUser.uid, user: user);
+      final selectedRole = await _localStorageService.getSelectedRole();
+
+      await _practiceSessionSubmissionService.saveCompletedSession(
+        uid: currentUser.uid,
+        userRole: user.role,
+        userLevel: user.level,
+        techStack: user.techStack,
+        sessionRole: state.sessionRole,
+        selectedRole: selectedRole,
+        questions: state.questions,
+        answers: state.answers,
+        evaluations: state.evaluations,
+        averageScore: state.averageScore,
+      );
 
       emit(
         state.copyWith(isSessionSubmitting: false, isSessionSubmitted: true),
@@ -378,107 +396,5 @@ class PracticeCubit extends Cubit<PracticeState> {
 
   Future<void> discardProgress() async {
     await _localStorageService.clearPracticeProgress();
-  }
-
-  Future<void> _saveCompletedSession({
-    required String uid,
-    required HomeUser user,
-  }) async {
-    final firestore = FirebaseFirestore.instance;
-    final sessionRef = firestore
-        .collection('users')
-        .doc(uid)
-        .collection('practiceSessions')
-        .doc();
-
-    final now = DateTime.now().toUtc();
-    final sessionRole = state.sessionRole?.trim() ?? '';
-    final selectedRole = await _localStorageService.getSelectedRole();
-    final selectedRoleValue = selectedRole?.trim() ?? '';
-    final practiceJob = sessionRole.isNotEmpty
-        ? sessionRole
-        : (selectedRoleValue.isNotEmpty ? selectedRoleValue : user.role);
-
-    final questionResults = <Map<String, dynamic>>[];
-    final weakQuestions = <Map<String, dynamic>>[];
-
-    for (var i = 0; i < state.questions.length; i++) {
-      final evaluation = state.evaluations[i];
-      if (evaluation == null) {
-        continue;
-      }
-
-      final question = state.questions[i];
-      final questionScorePercent = (evaluation.score * 10)
-          .clamp(0, 100)
-          .toDouble();
-
-      questionResults.add(<String, dynamic>{
-        'questionIndex': i,
-        'question': question,
-        'answer': (state.answers[i] ?? '').trim(),
-        'score': evaluation.score,
-        'scorePercent': questionScorePercent,
-        'feedback': evaluation.feedback,
-        'modelAnswer': evaluation.modelAnswer,
-        'topic': _inferTopic(
-          question: question,
-          techStack: user.techStack,
-          fallbackTopic: practiceJob,
-        ),
-      });
-
-      if (questionScorePercent < 50) {
-        weakQuestions.add(<String, dynamic>{
-          'question': question,
-          'scorePercent': questionScorePercent,
-        });
-      }
-    }
-
-    await sessionRef.set(<String, dynamic>{
-      'role': practiceJob,
-      'practiceJob': practiceJob,
-      'level': user.level,
-      'techStack': user.techStack,
-      'totalQuestions': state.questions.length,
-      'answeredQuestions': questionResults.length,
-      'averageScore': state.averageScore,
-      'averageScorePercent': (state.averageScore * 10).clamp(0, 100).toDouble(),
-      'questionResults': questionResults,
-      'weakQuestions': weakQuestions,
-      'createdAt': FieldValue.serverTimestamp(),
-      'createdAtClient': Timestamp.fromDate(now),
-    });
-  }
-
-  String _inferTopic({
-    required String question,
-    required List<String> techStack,
-    required String fallbackTopic,
-  }) {
-    final normalizedQuestion = question.toLowerCase();
-
-    final normalizedFallback = fallbackTopic.trim().toLowerCase();
-    if (normalizedFallback.isNotEmpty &&
-        normalizedQuestion.contains(normalizedFallback)) {
-      return fallbackTopic;
-    }
-
-    for (final topic in techStack) {
-      final normalizedTopic = topic.trim().toLowerCase();
-      if (normalizedTopic.isEmpty) {
-        continue;
-      }
-      if (normalizedQuestion.contains(normalizedTopic)) {
-        return topic;
-      }
-    }
-
-    if (fallbackTopic.trim().isNotEmpty) {
-      return fallbackTopic;
-    }
-
-    return techStack.isNotEmpty ? techStack.first : 'General';
   }
 }

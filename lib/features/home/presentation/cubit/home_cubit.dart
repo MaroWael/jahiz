@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jahiz/core/services/auth_service.dart';
 import 'package:jahiz/features/home/models/session_summary.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_state.dart';
 import 'package:jahiz/features/home/services/local_storage_service.dart';
@@ -12,17 +13,20 @@ class HomeCubit extends Cubit<HomeState> {
     QuestionService? questionService,
     LocalStorageService? localStorageService,
     SessionSummaryService? sessionSummaryService,
+    AuthService? authService,
   }) : _localUserService = localUserService ?? LocalUserService(),
        _questionService = questionService ?? QuestionService(),
        _localStorageService = localStorageService ?? LocalStorageService(),
        _sessionSummaryService =
            sessionSummaryService ?? SessionSummaryService(),
+       _authService = authService ?? AuthService(),
        super(const HomeState());
 
   final LocalUserService _localUserService;
   final QuestionService _questionService;
   final LocalStorageService _localStorageService;
   final SessionSummaryService _sessionSummaryService;
+  final AuthService _authService;
 
   Future<void> initialize() async {
     emit(state.copyWith(isLoading: true, clearError: true));
@@ -127,5 +131,17 @@ class HomeCubit extends Cubit<HomeState> {
 
   void updateTabIndex(int index) {
     emit(state.copyWith(activeTabIndex: index));
+  }
+
+  Future<bool> signOut() async {
+    try {
+      await _authService.signOut();
+      return true;
+    } catch (_) {
+      emit(
+        state.copyWith(errorMessage: 'Failed to sign out. Please try again.'),
+      );
+      return false;
+    }
   }
 }

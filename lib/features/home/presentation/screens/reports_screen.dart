@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:jahiz/features/home/models/practice_session_record.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jahiz/features/home/models/reports_overview.dart';
 import 'package:jahiz/features/home/models/weak_area.dart';
-import 'package:jahiz/features/home/services/reports_service.dart';
+import 'package:jahiz/features/home/presentation/cubit/reports_cubit.dart';
+import 'package:jahiz/features/home/presentation/cubit/reports_state.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -12,27 +13,16 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  static const int _historyPageSize = 20;
   static const int _weakAreaPreviewCount = 3;
 
-  final ReportsService _reportsService = ReportsService();
-  final List<PracticeSessionRecord> _historySessions =
-      <PracticeSessionRecord>[];
-  final Set<String> _expandedWeakAreaTopics = <String>{};
-
+  late final ReportsCubit _reportsCubit;
   late final ScrollController _scrollController;
-  late Future<ReportsOverview> _metricsFuture;
-  DateTime? _nextHistoryCursor;
-  bool _isHistoryLoading = false;
-  bool _hasMoreHistory = true;
-  Object? _historyError;
 
   @override
   void initState() {
     super.initState();
+    _reportsCubit = ReportsCubit()..initialize();
     _scrollController = ScrollController()..addListener(_onScroll);
-    _metricsFuture = _loadMetrics();
-    _loadMoreHistory(reset: true);
   }
 
   @override
@@ -40,18 +30,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
+    _reportsCubit.close();
     super.dispose();
   }
 
   Future<void> _refresh() async {
-    setState(() {
-      _metricsFuture = _loadMetrics();
-    });
-    await Future.wait<void>([_metricsFuture, _loadMoreHistory(reset: true)]);
-  }
-
-  Future<ReportsOverview> _loadMetrics() async {
-    return _reportsService.getReportsOverview();
+    await _reportsCubit.refresh();
   }
 
   void _onScroll() {
@@ -61,63 +45,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 220) {
-      _loadMoreHistory();
-    }
-  }
-
-  Future<void> _loadMoreHistory({bool reset = false}) async {
-    if (_isHistoryLoading) {
-      return;
-    }
-    if (!reset && !_hasMoreHistory) {
-      return;
-    }
-
-    setState(() {
-      _isHistoryLoading = true;
-      _historyError = null;
-      if (reset) {
-        _historySessions.clear();
-        _nextHistoryCursor = null;
-        _hasMoreHistory = true;
-      }
-    });
-
-    try {
-      final page = await _reportsService.getHistoryPage(
-        limit: _historyPageSize,
-        startAfterDate: _nextHistoryCursor,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        final existingIds = _historySessions
-            .map((session) => session.id)
-            .toSet();
-
-        for (final session in page.sessions) {
-          if (!existingIds.contains(session.id)) {
-            _historySessions.add(session);
-            existingIds.add(session.id);
-          }
-        }
-
-        _nextHistoryCursor = page.nextPageCursor;
-        _hasMoreHistory = page.hasMore;
-        _isHistoryLoading = false;
-      });
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _historyError = error;
-        _isHistoryLoading = false;
-      });
+      _reportsCubit.loadMoreHistory();
     }
   }
 
@@ -163,13 +91,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   void _toggleWeakArea(String topic) {
-    setState(() {
-      if (_expandedWeakAreaTopics.contains(topic)) {
-        _expandedWeakAreaTopics.remove(topic);
-      } else {
-        _expandedWeakAreaTopics.add(topic);
-      }
-    });
+    _reportsCubit.toggleWeakArea(topic);
   }
 
   Widget _reveal({required int order, required Widget child}) {
@@ -262,8 +184,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildWeakAreaCard(WeakArea weakArea) {
-    final isExpanded = _expandedWeakAreaTopics.contains(weakArea.topic);
+  Widget _buildWeakAreaCard(ReportsState state, WeakArea weakArea) {
+    final isExpanded = state.expandedWeakAreaTopics.contains(weakArea.topic);
     final hasMore = weakArea.lowQuestions.length > _weakAreaPreviewCount;
     final visibleQuestions = isExpanded
         ? weakArea.lowQuestions
@@ -425,15 +347,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  List<Widget> _buildHistorySection() {
-    if (_historySessions.isEmpty && _isHistoryLoading) {
+  List<Widget> _buildHistorySection(ReportsState state) {
+    if (state.historySessions.isEmpty && state.isHistoryLoading) {
       return const <Widget>[
         SizedBox(height: 16),
         Center(child: CircularProgressIndicator()),
       ];
     }
 
-    if (_historySessions.isEmpty && _historyError != null) {
+    if (state.historySessions.isEmpty && state.historyError != null) {
       return <Widget>[
         Container(
           padding: const EdgeInsets.all(18),
@@ -447,7 +369,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               const Text('Unable to load history. Please try again.'),
               const SizedBox(height: 10),
               ElevatedButton(
-                onPressed: () => _loadMoreHistory(reset: true),
+                onPressed: () => _reportsCubit.loadMoreHistory(reset: true),
                 child: const Text('Retry'),
               ),
             ],
@@ -456,7 +378,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ];
     }
 
-    if (_historySessions.isEmpty) {
+    if (state.historySessions.isEmpty) {
       return <Widget>[
         Container(
           padding: const EdgeInsets.all(18),
@@ -470,7 +392,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
 
     final widgets = <Widget>[];
-    for (final session in _historySessions) {
+    for (final session in state.historySessions) {
       widgets.add(
         Container(
           key: ValueKey<String>(session.id),
@@ -538,18 +460,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
       );
     }
 
-    if (_isHistoryLoading) {
+    if (state.isHistoryLoading) {
       widgets.add(
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 12),
           child: Center(child: CircularProgressIndicator()),
         ),
       );
-    } else if (_historyError != null) {
+    } else if (state.historyError != null) {
       widgets.add(
         Center(
           child: TextButton(
-            onPressed: _loadMoreHistory,
+            onPressed: () => _reportsCubit.loadMoreHistory(),
             child: const Text('Retry loading more history'),
           ),
         ),
@@ -561,153 +483,170 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
-      appBar: AppBar(title: const Text('Reports')),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: FutureBuilder<ReportsOverview>(
-          future: _metricsFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+    return BlocProvider<ReportsCubit>.value(
+      value: _reportsCubit,
+      child: BlocBuilder<ReportsCubit, ReportsState>(
+        builder: (context, state) {
+          if (state.isLoadingMetrics && state.metrics == null) {
+            return const Scaffold(
+              backgroundColor: Color(0xFFF4F6FB),
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
 
-            if (snapshot.hasError) {
-              return ListView(
+          if (state.metricsError != null && state.metrics == null) {
+            return Scaffold(
+              backgroundColor: const Color(0xFFF4F6FB),
+              appBar: AppBar(title: const Text('Reports')),
+              body: RefreshIndicator(
+                onRefresh: _refresh,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  children: const [
+                    Text(
+                      'Unable to load reports right now. Pull to refresh and try again.',
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final metrics =
+              state.metrics ??
+              const ReportsOverview(
+                averageScorePercent: null,
+                sessionCount: 0,
+                weakAreas: [],
+              );
+
+          return Scaffold(
+            backgroundColor: const Color(0xFFF4F6FB),
+            appBar: AppBar(title: const Text('Reports')),
+            body: RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
-                children: const [
-                  Text(
-                    'Unable to load reports right now. Pull to refresh and try again.',
-                  ),
-                ],
-              );
-            }
-
-            final metrics =
-                snapshot.data ??
-                const ReportsOverview(
-                  averageScorePercent: null,
-                  sessionCount: 0,
-                  weakAreas: [],
-                );
-
-            return ListView(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              children: [
-                _reveal(order: 0, child: _buildHeroCard(metrics)),
-                const SizedBox(height: 16),
-                _reveal(
-                  order: 1,
-                  child: const Text(
-                    'Performance Overview',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (!metrics.hasData)
-                  _reveal(order: 2, child: _buildEmptyState())
-                else if (metrics.averageScorePercent != null)
-                  _reveal(
-                    order: 2,
-                    child: _buildSurfaceCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Average Score',
-                            style: TextStyle(
-                              color: Colors.black54,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 320),
-                            child: Text(
-                              key: ValueKey<String>(
-                                metrics.averageScorePercent!.toStringAsFixed(1),
-                              ),
-                              '${metrics.averageScorePercent!.toStringAsFixed(1)}%',
-                              style: const TextStyle(
-                                fontSize: 36,
-                                fontWeight: FontWeight.w800,
-                                height: 1,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Across ${metrics.sessionCount} completed sessions',
-                            style: const TextStyle(color: Colors.black54),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  _reveal(
-                    order: 2,
-                    child: _buildSurfaceCard(
-                      child: const Text(
-                        'Complete at least one practice session to see reports.',
-                      ),
-                    ),
-                  ),
-                if (metrics.hasData) ...[
+                children: [
+                  _reveal(order: 0, child: _buildHeroCard(metrics)),
                   const SizedBox(height: 16),
                   _reveal(
-                    order: 3,
+                    order: 1,
                     child: const Text(
-                      'Weak Areas',
+                      'Performance Overview',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 22,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  if (metrics.weakAreas.isEmpty)
+                  const SizedBox(height: 12),
+                  if (!metrics.hasData)
+                    _reveal(order: 2, child: _buildEmptyState())
+                  else if (metrics.averageScorePercent != null)
                     _reveal(
-                      order: 4,
+                      order: 2,
                       child: _buildSurfaceCard(
-                        child: const Text('No weak areas detected'),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Average Score',
+                              style: TextStyle(
+                                color: Colors.black54,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 320),
+                              child: Text(
+                                key: ValueKey<String>(
+                                  metrics.averageScorePercent!.toStringAsFixed(
+                                    1,
+                                  ),
+                                ),
+                                '${metrics.averageScorePercent!.toStringAsFixed(1)}%',
+                                style: const TextStyle(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Across ${metrics.sessionCount} completed sessions',
+                              style: const TextStyle(color: Colors.black54),
+                            ),
+                          ],
+                        ),
                       ),
                     )
                   else
-                    ...metrics.weakAreas.asMap().entries.map(
-                      (entry) => Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        child: _reveal(
-                          order: 4 + entry.key,
-                          child: _buildWeakAreaCard(entry.value),
+                    _reveal(
+                      order: 2,
+                      child: _buildSurfaceCard(
+                        child: const Text(
+                          'Complete at least one practice session to see reports.',
                         ),
                       ),
                     ),
-                  const SizedBox(height: 16),
-                  _reveal(
-                    order: 12,
-                    child: const Text(
-                      'History',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
+                  if (metrics.hasData) ...[
+                    const SizedBox(height: 16),
+                    _reveal(
+                      order: 3,
+                      child: const Text(
+                        'Weak Areas',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  ..._buildHistorySection().asMap().entries.map(
-                    (entry) =>
-                        _reveal(order: 13 + entry.key, child: entry.value),
-                  ),
+                    const SizedBox(height: 10),
+                    if (metrics.weakAreas.isEmpty)
+                      _reveal(
+                        order: 4,
+                        child: _buildSurfaceCard(
+                          child: const Text('No weak areas detected'),
+                        ),
+                      )
+                    else
+                      ...metrics.weakAreas.asMap().entries.map(
+                        (entry) => Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          child: _reveal(
+                            order: 4 + entry.key,
+                            child: _buildWeakAreaCard(state, entry.value),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    _reveal(
+                      order: 12,
+                      child: const Text(
+                        'History',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ..._buildHistorySection(state).asMap().entries.map(
+                      (entry) =>
+                          _reveal(order: 13 + entry.key, child: entry.value),
+                    ),
+                  ],
                 ],
-              ],
-            );
-          },
-        ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
