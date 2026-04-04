@@ -11,6 +11,7 @@ class PracticeState {
     this.errorMessage,
     this.validationError,
     this.user,
+    this.sessionRole,
     this.questions = const <String>[],
     this.currentIndex = 0,
     this.answers = const <int, String>{},
@@ -25,6 +26,7 @@ class PracticeState {
   final String? errorMessage;
   final String? validationError;
   final HomeUser? user;
+  final String? sessionRole;
   final List<String> questions;
   final int currentIndex;
   final Map<int, String> answers;
@@ -74,6 +76,7 @@ class PracticeState {
     String? errorMessage,
     String? validationError,
     HomeUser? user,
+    String? sessionRole,
     List<String>? questions,
     int? currentIndex,
     Map<int, String>? answers,
@@ -92,6 +95,7 @@ class PracticeState {
           ? null
           : (validationError ?? this.validationError),
       user: user ?? this.user,
+      sessionRole: sessionRole ?? this.sessionRole,
       questions: questions ?? this.questions,
       currentIndex: currentIndex ?? this.currentIndex,
       answers: answers ?? this.answers,

@@ -37,9 +37,17 @@ class PracticeCubit extends Cubit<PracticeState> {
 
     try {
       final user = await _localUserService.getCurrentUser();
+      final selectedRole = await _localStorageService.getSelectedRole();
+      final activeRole =
+          (selectedRole != null && selectedRole.trim().isNotEmpty)
+          ? selectedRole
+          : user.role;
 
       if (!forceRefresh) {
-        final restored = await _tryRestoreProgress(user);
+        final restored = await _tryRestoreProgress(
+          user,
+          activeRole: activeRole,
+        );
         if (restored) {
           return;
         }
@@ -47,7 +55,7 @@ class PracticeCubit extends Cubit<PracticeState> {
 
       final questions = await _questionService
           .getPracticeQuestions(
-            role: user.role,
+            role: activeRole,
             level: user.level,
             techStack: user.techStack,
           )
@@ -57,6 +65,7 @@ class PracticeCubit extends Cubit<PracticeState> {
         state.copyWith(
           isLoadingQuestions: false,
           user: user,
+          sessionRole: activeRole,
           questions: questions,
           currentIndex: 0,
           answers: const <int, String>{},
@@ -86,7 +95,10 @@ class PracticeCubit extends Cubit<PracticeState> {
     }
   }
 
-  Future<bool> _tryRestoreProgress(HomeUser user) async {
+  Future<bool> _tryRestoreProgress(
+    HomeUser user, {
+    required String activeRole,
+  }) async {
     final saved = await _localStorageService.getPracticeProgress();
     if (saved == null) {
       return false;
@@ -94,7 +106,7 @@ class PracticeCubit extends Cubit<PracticeState> {
 
     final role = (saved['role'] ?? '').toString();
     final level = (saved['level'] ?? '').toString();
-    if (role != user.role || level != user.level) {
+    if (role != activeRole || level != user.level) {
       return false;
     }
 
@@ -148,6 +160,7 @@ class PracticeCubit extends Cubit<PracticeState> {
       state.copyWith(
         isLoadingQuestions: false,
         user: user,
+        sessionRole: role,
         questions: rawQuestions,
         currentIndex: currentIndex.clamp(0, rawQuestions.length - 1),
         answers: answers,
@@ -208,7 +221,7 @@ class PracticeCubit extends Cubit<PracticeState> {
     try {
       final evaluation = await _questionService
           .evaluatePracticeAnswer(
-            role: user.role,
+            role: state.sessionRole ?? user.role,
             level: user.level,
             techStack: user.techStack,
             question: state.currentQuestion,
@@ -292,7 +305,7 @@ class PracticeCubit extends Cubit<PracticeState> {
     }
 
     await _localStorageService.savePracticeProgress(<String, dynamic>{
-      'role': user.role,
+      'role': state.sessionRole ?? user.role,
       'level': user.level,
       'techStack': user.techStack,
       'questions': state.questions,
@@ -379,7 +392,15 @@ class PracticeCubit extends Cubit<PracticeState> {
         .doc();
 
     final now = DateTime.now().toUtc();
+    final sessionRole = state.sessionRole?.trim() ?? '';
+    final selectedRole = await _localStorageService.getSelectedRole();
+    final selectedRoleValue = selectedRole?.trim() ?? '';
+    final practiceJob = sessionRole.isNotEmpty
+        ? sessionRole
+        : (selectedRoleValue.isNotEmpty ? selectedRoleValue : user.role);
+
     final questionResults = <Map<String, dynamic>>[];
+    final weakQuestions = <Map<String, dynamic>>[];
 
     for (var i = 0; i < state.questions.length; i++) {
       final evaluation = state.evaluations[i];
@@ -388,20 +409,36 @@ class PracticeCubit extends Cubit<PracticeState> {
       }
 
       final question = state.questions[i];
+      final questionScorePercent = (evaluation.score * 10)
+          .clamp(0, 100)
+          .toDouble();
+
       questionResults.add(<String, dynamic>{
         'questionIndex': i,
         'question': question,
         'answer': (state.answers[i] ?? '').trim(),
         'score': evaluation.score,
-        'scorePercent': (evaluation.score * 10).clamp(0, 100).toDouble(),
+        'scorePercent': questionScorePercent,
         'feedback': evaluation.feedback,
         'modelAnswer': evaluation.modelAnswer,
-        'topic': _inferTopic(question: question, techStack: user.techStack),
+        'topic': _inferTopic(
+          question: question,
+          techStack: user.techStack,
+          fallbackTopic: practiceJob,
+        ),
       });
+
+      if (questionScorePercent < 50) {
+        weakQuestions.add(<String, dynamic>{
+          'question': question,
+          'scorePercent': questionScorePercent,
+        });
+      }
     }
 
     await sessionRef.set(<String, dynamic>{
-      'role': user.role,
+      'role': practiceJob,
+      'practiceJob': practiceJob,
       'level': user.level,
       'techStack': user.techStack,
       'totalQuestions': state.questions.length,
@@ -409,6 +446,7 @@ class PracticeCubit extends Cubit<PracticeState> {
       'averageScore': state.averageScore,
       'averageScorePercent': (state.averageScore * 10).clamp(0, 100).toDouble(),
       'questionResults': questionResults,
+      'weakQuestions': weakQuestions,
       'createdAt': FieldValue.serverTimestamp(),
       'createdAtClient': Timestamp.fromDate(now),
     });
@@ -417,8 +455,15 @@ class PracticeCubit extends Cubit<PracticeState> {
   String _inferTopic({
     required String question,
     required List<String> techStack,
+    required String fallbackTopic,
   }) {
     final normalizedQuestion = question.toLowerCase();
+
+    final normalizedFallback = fallbackTopic.trim().toLowerCase();
+    if (normalizedFallback.isNotEmpty &&
+        normalizedQuestion.contains(normalizedFallback)) {
+      return fallbackTopic;
+    }
 
     for (final topic in techStack) {
       final normalizedTopic = topic.trim().toLowerCase();
@@ -428,6 +473,10 @@ class PracticeCubit extends Cubit<PracticeState> {
       if (normalizedQuestion.contains(normalizedTopic)) {
         return topic;
       }
+    }
+
+    if (fallbackTopic.trim().isNotEmpty) {
+      return fallbackTopic;
     }
 
     return techStack.isNotEmpty ? techStack.first : 'General';

@@ -36,12 +36,20 @@ class _HomeScreanState extends State<HomeScrean> {
     await _homeCubit.initialize();
   }
 
-  void _openPractice() {
-    Navigator.pushNamed(context, '/practice');
+  Future<void> _openPractice() async {
+    await Navigator.pushNamed(context, '/practice');
+    if (!mounted) {
+      return;
+    }
+    await _homeCubit.initialize();
   }
 
-  void _openAnswer() {
-    Navigator.pushNamed(context, '/answer');
+  Future<void> _openAnswer() async {
+    await Navigator.pushNamed(context, '/answer');
+    if (!mounted) {
+      return;
+    }
+    await _homeCubit.initialize();
   }
 
   void _openReports() {
@@ -339,11 +347,11 @@ class _HomeScreanState extends State<HomeScrean> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Last Session',
+                  'Overall Progress',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 6),
-                Text('Score: ${summary.score}%'),
+                Text('Average Score: ${summary.score}%'),
                 Text('Streak: ${summary.streak} days'),
               ],
             ),

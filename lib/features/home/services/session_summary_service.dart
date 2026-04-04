@@ -3,21 +3,15 @@ import 'package:jahiz/features/home/models/session_summary.dart';
 import 'package:jahiz/features/home/services/practice_session_service.dart';
 
 class SessionSummaryService {
-  factory SessionSummaryService({
-    PracticeSessionService? practiceSessionService,
-  }) {
-    if (practiceSessionService != null) {
-      _instance._practiceSessionService = practiceSessionService;
-    }
-    return _instance;
-  }
+  factory SessionSummaryService() => _instance;
 
   SessionSummaryService._internal();
 
   static final SessionSummaryService _instance =
       SessionSummaryService._internal();
 
-  PracticeSessionService _practiceSessionService = PracticeSessionService();
+  final PracticeSessionService _practiceSessionService =
+      PracticeSessionService();
 
   Future<SessionSummary?> getLastSessionSummary() async {
     final sessions = await _practiceSessionService.getCompletedSessions();
@@ -25,13 +19,12 @@ class SessionSummaryService {
       return null;
     }
 
-    final latestSession = sessions.first;
+    final averageScorePercent =
+        sessions.fold<double>(0, (sum, session) => sum + session.scorePercent) /
+        sessions.length;
     final streak = _calculateStreak(sessions);
 
-    return SessionSummary(
-      score: latestSession.scorePercent.round(),
-      streak: streak,
-    );
+    return SessionSummary(score: averageScorePercent.round(), streak: streak);
   }
 
   int _calculateStreak(List<PracticeSessionRecord> sessions) {
