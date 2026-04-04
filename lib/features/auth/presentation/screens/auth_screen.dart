@@ -2,8 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:jahiz/core/constants/app_colors.dart';
-import 'package:jahiz/core/services/auth_service.dart';
-import 'package:jahiz/core/services/user_profile_service.dart';
+import 'package:jahiz/features/auth/presentation/controllers/auth_flow_controller.dart';
 import 'package:jahiz/features/auth/presentation/screens/email_verification_screen.dart';
 import 'package:jahiz/features/home/presentation/screens/home_screan.dart';
 import 'package:jahiz/features/profile_onboarding/presentation/screens/profile_onboarding_screen.dart';
@@ -17,8 +16,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _authService = AuthService();
-  final _userProfileService = UserProfileService();
+  final _authFlowController = AuthFlowController();
 
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -53,41 +51,18 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() => _isLoading = true);
 
     try {
-      if (_isRegisterMode) {
-        await _authService.registerWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-          fullName: _fullNameController.text.trim(),
-        );
+      final destination = await _authFlowController.authenticateWithEmail(
+        isRegisterMode: _isRegisterMode,
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+        fullName: _fullNameController.text.trim(),
+      );
 
-        if (!mounted) {
-          return;
-        }
-
-        Navigator.pushReplacement(
-          context,
-          CupertinoPageRoute(builder: (_) => const EmailVerificationScreen()),
-        );
-      } else {
-        final credential = await _authService.signInWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-
-        final user = credential.user;
-        if (user != null && !user.emailVerified) {
-          if (!mounted) {
-            return;
-          }
-          Navigator.pushReplacement(
-            context,
-            CupertinoPageRoute(builder: (_) => const EmailVerificationScreen()),
-          );
-          return;
-        }
-
-        await _redirectAfterAuth(credential.user);
+      if (!mounted) {
+        return;
       }
+
+      _navigateAfterAuth(destination);
     } on FirebaseAuthException catch (error) {
       if (!mounted) {
         return;
@@ -119,8 +94,13 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final credential = await _authService.signInWithGoogle();
-      await _redirectAfterAuth(credential.user);
+      final destination = await _authFlowController.authenticateWithGoogle();
+
+      if (!mounted) {
+        return;
+      }
+
+      _navigateAfterAuth(destination);
     } on FirebaseAuthException catch (error) {
       if (!mounted) {
         return;
@@ -150,26 +130,29 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  Future<void> _redirectAfterAuth(User? user) async {
-    if (user == null || !mounted) {
-      return;
+  void _navigateAfterAuth(PostAuthDestination destination) {
+    switch (destination) {
+      case PostAuthDestination.emailVerification:
+        Navigator.pushReplacement(
+          context,
+          CupertinoPageRoute(builder: (_) => const EmailVerificationScreen()),
+        );
+        return;
+      case PostAuthDestination.home:
+        Navigator.pushReplacement(
+          context,
+          CupertinoPageRoute(builder: (_) => const HomeScrean()),
+        );
+        return;
+      case PostAuthDestination.profileOnboarding:
+        Navigator.pushReplacement(
+          context,
+          CupertinoPageRoute(builder: (_) => const ProfileOnboardingScreen()),
+        );
+        return;
+      case PostAuthDestination.auth:
+        return;
     }
-
-    final hasCompleted = await _userProfileService.hasCompletedOnboarding(
-      user.uid,
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    Navigator.pushReplacement(
-      context,
-      CupertinoPageRoute(
-        builder: (_) =>
-            hasCompleted ? const HomeScrean() : const ProfileOnboardingScreen(),
-      ),
-    );
   }
 
   String? _validateEmail(String? value) {
@@ -299,9 +282,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                 return;
                               }
                               try {
-                                await _authService.sendPasswordResetEmail(
-                                  email: email,
-                                );
+                                await _authFlowController
+                                    .sendPasswordResetEmail(email: email);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
@@ -401,7 +383,8 @@ class _AuthScreenState extends State<AuthScreen> {
                   onPressed: _isLoading
                       ? null
                       : () {
-                          setState(() { // solve the bug of form state not resetting when switching modes
+                          setState(() {
+                            // solve the bug of form state not resetting when switching modes
                             _isRegisterMode = !_isRegisterMode;
                             _emailController.clear();
                             _passwordController.clear();

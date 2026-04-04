@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:jahiz/core/services/auth_service.dart';
 import 'package:jahiz/features/auth/presentation/screens/auth_screen.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_cubit.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_state.dart';
@@ -14,7 +13,7 @@ class HomeScrean extends StatefulWidget {
 
 class _HomeScreanState extends State<HomeScrean> {
   final HomeCubit _homeCubit = HomeCubit();
-  final AuthService _authService = AuthService();
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -24,21 +23,40 @@ class _HomeScreanState extends State<HomeScrean> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     _homeCubit.close();
     super.dispose();
   }
 
-  void _openPractice() {
-    Navigator.pushNamed(context, '/practice');
+  Future<void> _refreshHome() async {
+    FocusScope.of(context).unfocus();
+    _searchController.clear();
+    await _homeCubit.initialize();
   }
 
-  void _openAnswer() {
-    Navigator.pushNamed(context, '/answer');
+  Future<void> _openPractice() async {
+    await Navigator.pushNamed(context, '/practice');
+    if (!mounted) {
+      return;
+    }
+    await _homeCubit.initialize();
+  }
+
+  Future<void> _openAnswer() async {
+    await Navigator.pushNamed(context, '/answer');
+    if (!mounted) {
+      return;
+    }
+    await _homeCubit.initialize();
+  }
+
+  void _openReports() {
+    Navigator.pushNamed(context, '/reports');
   }
 
   Future<void> _logout() async {
-    await _authService.signOut();
-    if (!mounted) {
+    final didSignOut = await _homeCubit.signOut();
+    if (!didSignOut || !mounted) {
       return;
     }
 
@@ -191,6 +209,7 @@ class _HomeScreanState extends State<HomeScrean> {
 
   Widget _buildSearchBar(HomeState state) {
     return TextField(
+      controller: _searchController,
       onChanged: _homeCubit.updateSearchQuery,
       decoration: InputDecoration(
         hintText: 'Search job roles...',
@@ -205,29 +224,68 @@ class _HomeScreanState extends State<HomeScrean> {
     );
   }
 
-  Widget _buildRoleCard(String role, bool selected) {
+  Widget _buildRoleCard(String role, bool selected, int index) {
+    final List<Color> cardColors = [
+      const Color(0xFF4A7DFF),
+      const Color(0xFF2EC5B6),
+      const Color(0xFF6C63FF),
+      const Color(0xFFFF8C42),
+    ];
+
+    final Color currentColor = cardColors[index % cardColors.length];
+
     return GestureDetector(
-      onTap: () => _homeCubit.selectRole(role),
+      onTap: () {
+        FocusScope.of(context).unfocus();
+        _homeCubit.selectRole(role);
+      },
       child: Container(
         width: 170,
         margin: const EdgeInsets.only(right: 12),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFE6EEFF) : Colors.white,
+          color: selected ? currentColor : currentColor.withValues(alpha: 0.75),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? const Color(0xFF3A7BFF) : const Color(0xFFE6E8EC),
+            color: selected ? Colors.white : currentColor,
+            width: selected ? 2 : 1.2,
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.work_outline_rounded,
-              color: selected ? const Color(0xFF3A7BFF) : Colors.black87,
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.work_outline_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
-            const SizedBox(height: 10),
-            Text(role, style: const TextStyle(fontWeight: FontWeight.w600)),
+
+            const SizedBox(height: 12),
+
+            Expanded(
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Text(
+                  role,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    fontSize: 15,
+                    height: 1.2,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -287,11 +345,11 @@ class _HomeScreanState extends State<HomeScrean> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Last Session',
+                  'Overall Progress',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 6),
-                Text('Score: ${summary.score}%'),
+                Text('Average Score: ${summary.score}%'),
                 Text('Streak: ${summary.streak} days'),
               ],
             ),
@@ -312,7 +370,7 @@ class _HomeScreanState extends State<HomeScrean> {
             backgroundColor: const Color(0xFFF4F6FB),
             body: SafeArea(
               child: RefreshIndicator(
-                onRefresh: _homeCubit.initialize,
+                onRefresh: _refreshHome,
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -341,6 +399,7 @@ class _HomeScreanState extends State<HomeScrean> {
                               (role) => _buildRoleCard(
                                 role,
                                 state.selectedRole == role,
+                                state.filteredRoles.indexOf(role),
                               ),
                             )
                             .toList(),
@@ -371,6 +430,8 @@ class _HomeScreanState extends State<HomeScrean> {
                 _homeCubit.updateTabIndex(index);
                 if (index == 1) {
                   _openPractice();
+                } else if (index == 2) {
+                  _openReports();
                 }
               },
               type: BottomNavigationBarType.fixed,

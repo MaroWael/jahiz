@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:jahiz/core/constants/app_colors.dart';
 import 'package:jahiz/firebase_options.dart';
+import 'package:jahiz/features/home/presentation/screens/reports_screen.dart';
 import 'package:jahiz/features/practice/presentation/screens/practice_screen.dart';
 import 'package:jahiz/features/splash/presentation/screens/splash_screen.dart';
 
@@ -33,6 +34,7 @@ class MainApp extends StatelessWidget {
       routes: {
         '/practice': (_) => const PracticeScreen(),
         '/answer': (_) => const PracticeScreen(),
+        '/reports': (_) => const ReportsScreen(),
       },
       home: const SplashScreen(),
     );

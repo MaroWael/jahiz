@@ -1,9 +1,8 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:jahiz/core/constants/app_colors.dart';
-import 'package:jahiz/core/services/user_profile_service.dart';
 import 'package:jahiz/features/home/presentation/screens/home_screan.dart';
+import 'package:jahiz/features/profile_onboarding/presentation/controllers/profile_onboarding_controller.dart';
 
 enum UserType { student, professional }
 
@@ -22,7 +21,7 @@ class ProfileOnboardingScreen extends StatefulWidget {
 }
 
 class _ProfileOnboardingScreenState extends State<ProfileOnboardingScreen> {
-  final _userProfileService = UserProfileService();
+  final _profileOnboardingController = ProfileOnboardingController();
 
   int _currentStep = 0;
   bool _isSaving = false;
@@ -145,18 +144,10 @@ class _ProfileOnboardingScreenState extends State<ProfileOnboardingScreen> {
   }
 
   Future<void> _saveAndFinish() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null || user.email == null) {
-      _showValidationMessage('Unable to identify the current user.');
-      return;
-    }
-
     setState(() => _isSaving = true);
 
     try {
-      await _userProfileService.saveOnboardingData(
-        uid: user.uid,
-        email: user.email!,
+      await _profileOnboardingController.saveOnboardingData(
         userType: selectedUserType.name,
         studentInfo: {
           'university': _universityController.text.trim(),

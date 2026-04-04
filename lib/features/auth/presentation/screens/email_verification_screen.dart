@@ -2,8 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:jahiz/core/constants/app_colors.dart';
-import 'package:jahiz/core/services/auth_service.dart';
-import 'package:jahiz/core/services/user_profile_service.dart';
+import 'package:jahiz/features/auth/presentation/controllers/auth_flow_controller.dart';
 import 'package:jahiz/features/auth/presentation/screens/auth_screen.dart';
 import 'package:jahiz/features/home/presentation/screens/home_screan.dart';
 import 'package:jahiz/features/profile_onboarding/presentation/screens/profile_onboarding_screen.dart';
@@ -17,8 +16,7 @@ class EmailVerificationScreen extends StatefulWidget {
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
-  final AuthService _authService = AuthService();
-  final UserProfileService _userProfileService = UserProfileService();
+  final AuthFlowController _authFlowController = AuthFlowController();
 
   bool _isLoading = false;
 
@@ -26,22 +24,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await _authService.reloadCurrentUser();
-      final user = FirebaseAuth.instance.currentUser;
+      final destination = await _authFlowController.refreshVerificationStatus();
 
-      if (user == null) {
-        if (!mounted) {
-          return;
-        }
-        Navigator.pushAndRemoveUntil(
-          context,
-          CupertinoPageRoute(builder: (_) => const AuthScreen()),
-          (_) => false,
-        );
+      if (!mounted) {
         return;
       }
 
-      if (!user.emailVerified) {
+      if (destination == PostAuthDestination.emailVerification) {
         if (!mounted) {
           return;
         }
@@ -51,22 +40,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         return;
       }
 
-      final hasCompletedOnboarding = await _userProfileService
-          .hasCompletedOnboarding(user.uid);
-
-      if (!mounted) {
-        return;
-      }
-
-      Navigator.pushAndRemoveUntil(
-        context,
-        CupertinoPageRoute(
-          builder: (_) => hasCompletedOnboarding
-              ? const HomeScrean()
-              : const ProfileOnboardingScreen(),
-        ),
-        (_) => false,
-      );
+      _navigateAfterAuth(destination);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -77,7 +51,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   Future<void> _resendVerificationEmail() async {
     setState(() => _isLoading = true);
     try {
-      await _authService.sendEmailVerification();
+      await _authFlowController.resendVerificationEmail();
       if (!mounted) {
         return;
       }
@@ -99,7 +73,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   }
 
   Future<void> _logout() async {
-    await _authService.signOut();
+    await _authFlowController.signOut();
     if (!mounted) {
       return;
     }
@@ -110,9 +84,33 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     );
   }
 
+  void _navigateAfterAuth(PostAuthDestination destination) {
+    Widget target = const AuthScreen();
+
+    switch (destination) {
+      case PostAuthDestination.home:
+        target = const HomeScrean();
+        break;
+      case PostAuthDestination.profileOnboarding:
+        target = const ProfileOnboardingScreen();
+        break;
+      case PostAuthDestination.auth:
+        target = const AuthScreen();
+        break;
+      case PostAuthDestination.emailVerification:
+        return;
+    }
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      CupertinoPageRoute(builder: (_) => target),
+      (_) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final email = FirebaseAuth.instance.currentUser?.email ?? '';
+    final email = _authFlowController.currentUserEmail;
 
     return Scaffold(
       backgroundColor: AppColors.background,

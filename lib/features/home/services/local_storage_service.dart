@@ -41,6 +41,11 @@ class LocalStorageService {
     return prefs.getString(selectedRoleKey);
   }
 
+  Future<void> clearSelectedRole() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove(selectedRoleKey);
+}
+
   Future<void> savePracticeProgress(Map<String, dynamic> progress) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(practiceProgressKey, jsonEncode(progress));
