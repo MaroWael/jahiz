@@ -44,6 +44,10 @@ class _HomeScreanState extends State<HomeScrean> {
     Navigator.pushNamed(context, '/answer');
   }
 
+  void _openReports() {
+    Navigator.pushNamed(context, '/reports');
+  }
+
   Future<void> _logout() async {
     await _authService.signOut();
     if (!mounted) {
@@ -420,6 +424,8 @@ class _HomeScreanState extends State<HomeScrean> {
                 _homeCubit.updateTabIndex(index);
                 if (index == 1) {
                   _openPractice();
+                } else if (index == 2) {
+                  _openReports();
                 }
               },
               type: BottomNavigationBarType.fixed,
