@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jahiz/core/services/auth_service.dart';
+import 'package:jahiz/core/services/premium_access_guard_service.dart';
 import 'package:jahiz/features/home/models/session_summary.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_state.dart';
 import 'package:jahiz/features/home/services/local_storage_service.dart';
@@ -14,12 +15,15 @@ class HomeCubit extends Cubit<HomeState> {
     LocalStorageService? localStorageService,
     SessionSummaryService? sessionSummaryService,
     AuthService? authService,
+    PremiumAccessGuardService? premiumAccessGuardService,
   }) : _localUserService = localUserService ?? LocalUserService(),
        _questionService = questionService ?? QuestionService(),
        _localStorageService = localStorageService ?? LocalStorageService(),
        _sessionSummaryService =
            sessionSummaryService ?? SessionSummaryService(),
        _authService = authService ?? AuthService(),
+       _premiumAccessGuardService =
+           premiumAccessGuardService ?? const PremiumAccessGuardService(),
        super(const HomeState());
 
   final LocalUserService _localUserService;
@@ -27,6 +31,31 @@ class HomeCubit extends Cubit<HomeState> {
   final LocalStorageService _localStorageService;
   final SessionSummaryService _sessionSummaryService;
   final AuthService _authService;
+  final PremiumAccessGuardService _premiumAccessGuardService;
+
+  Future<PremiumAccessDecision> guardPremiumFeature({
+    required PremiumFeature feature,
+    PremiumDeniedHandling deniedHandling = PremiumDeniedHandling.returnError,
+  }) async {
+    final user = state.user;
+    if (user == null) {
+      const message = 'Please wait while your profile is loading.';
+      emit(state.copyWith(errorMessage: message));
+      return const PremiumAccessDecision.deniedWithError(message: message);
+    }
+
+    final decision = _premiumAccessGuardService.checkAccess(
+      isPremium: user.isPremium,
+      feature: feature,
+      deniedHandling: deniedHandling,
+    );
+
+    if (!decision.isAllowed && decision.message != null) {
+      emit(state.copyWith(errorMessage: decision.message));
+    }
+
+    return decision;
+  }
 
   Future<void> initialize() async {
     emit(state.copyWith(isLoading: true, clearError: true));

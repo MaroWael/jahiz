@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jahiz/core/services/premium_access_guard_service.dart';
 import 'package:jahiz/features/home/models/home_user.dart';
 import 'package:jahiz/features/home/services/local_storage_service.dart';
 import 'package:jahiz/features/home/services/local_user_service.dart';
@@ -15,12 +16,15 @@ class PracticeCubit extends Cubit<PracticeState> {
     QuestionService? questionService,
     LocalStorageService? localStorageService,
     PracticeSessionSubmissionService? practiceSessionSubmissionService,
+    PremiumAccessGuardService? premiumAccessGuardService,
   }) : _localUserService = localUserService ?? LocalUserService(),
        _questionService = questionService ?? QuestionService(),
        _localStorageService = localStorageService ?? LocalStorageService(),
        _practiceSessionSubmissionService =
            practiceSessionSubmissionService ??
            PracticeSessionSubmissionService(),
+       _premiumAccessGuardService =
+           premiumAccessGuardService ?? const PremiumAccessGuardService(),
        super(const PracticeState());
 
   static const int minCharacters = 40;
@@ -29,6 +33,7 @@ class PracticeCubit extends Cubit<PracticeState> {
   final QuestionService _questionService;
   final LocalStorageService _localStorageService;
   final PracticeSessionSubmissionService _practiceSessionSubmissionService;
+  final PremiumAccessGuardService _premiumAccessGuardService;
 
   Future<void> initialize({bool forceRefresh = false}) async {
     emit(
@@ -42,6 +47,22 @@ class PracticeCubit extends Cubit<PracticeState> {
 
     try {
       final user = await _localUserService.getCurrentUser();
+      final accessDecision = _premiumAccessGuardService.checkAccess(
+        isPremium: user.isPremium,
+        feature: PremiumFeature.practiceInterview,
+      );
+
+      if (!accessDecision.isAllowed) {
+        emit(
+          state.copyWith(
+            isLoadingQuestions: false,
+            isTimeout: false,
+            errorMessage: accessDecision.message,
+          ),
+        );
+        return;
+      }
+
       final selectedRole = await _localStorageService.getSelectedRole();
       final activeRole =
           (selectedRole != null && selectedRole.trim().isNotEmpty)
@@ -189,6 +210,20 @@ class PracticeCubit extends Cubit<PracticeState> {
   Future<void> submitCurrentAnswer() async {
     final user = state.user;
     if (user == null || !state.hasQuestions) {
+      return;
+    }
+
+    final accessDecision = _premiumAccessGuardService.checkAccess(
+      isPremium: user.isPremium,
+      feature: PremiumFeature.aiEvaluation,
+    );
+    if (!accessDecision.isAllowed) {
+      emit(
+        state.copyWith(
+          errorMessage: accessDecision.message,
+          clearValidationError: true,
+        ),
+      );
       return;
     }
 

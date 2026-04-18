@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jahiz/core/services/premium_access_guard_service.dart';
 import 'package:jahiz/features/auth/presentation/screens/auth_screen.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_cubit.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_state.dart';
@@ -35,11 +36,51 @@ class _HomeScreanState extends State<HomeScrean> {
   }
 
   Future<void> _openPractice() async {
+    final accessDecision = await _homeCubit.guardPremiumFeature(
+      feature: PremiumFeature.practiceInterview,
+      deniedHandling: PremiumDeniedHandling.triggerPaywall,
+    );
+
+    if (!accessDecision.isAllowed) {
+      if (accessDecision.shouldTriggerPaywall) {
+        await _showPremiumPaywall(
+          accessDecision.message ?? 'Upgrade to Premium to use this feature.',
+        );
+      }
+      return;
+    }
+
     await Navigator.pushNamed(context, '/practice');
     if (!mounted) {
       return;
     }
     await _homeCubit.initialize();
+  }
+
+  Future<void> _showPremiumPaywall(String message) async {
+    if (!mounted) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Premium Required'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Not now'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('View plans'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _openAnswer() async {
