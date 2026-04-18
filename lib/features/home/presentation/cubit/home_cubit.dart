@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jahiz/core/services/auth_service.dart';
 import 'package:jahiz/core/services/premium_access_guard_service.dart';
+import 'package:jahiz/features/home/models/home_user.dart';
 import 'package:jahiz/features/home/models/session_summary.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_state.dart';
 import 'package:jahiz/features/home/services/local_storage_service.dart';
@@ -78,6 +79,9 @@ class HomeCubit extends Cubit<HomeState> {
         level: user.level,
         techStack: user.techStack,
       );
+      final freePracticeSessionsLeft = await _resolveFreePracticeSessionsLeft(
+        user,
+      );
       SessionSummary? sessionSummary;
       try {
         sessionSummary = await _sessionSummaryService.getLastSessionSummary();
@@ -97,6 +101,7 @@ class HomeCubit extends Cubit<HomeState> {
           dailyQuestion: question,
           notificationCount: 3,
           sessionSummary: sessionSummary,
+          freePracticeSessionsLeft: freePracticeSessionsLeft,
           popularRoles: popularRoles,
           allRoles: allRoles,
         ),
@@ -172,5 +177,22 @@ class HomeCubit extends Cubit<HomeState> {
       );
       return false;
     }
+  }
+
+  Future<int?> _resolveFreePracticeSessionsLeft(HomeUser user) async {
+    if (user.isPremium) {
+      return null;
+    }
+
+    final uid = _localUserService.authenticatedUser?.uid;
+    if (uid == null || uid.trim().isEmpty) {
+      return 0;
+    }
+
+    final usedSessions = await _localStorageService
+        .getDailyPracticeSessionUsageCount(uid: uid);
+    final remaining =
+        LocalStorageService.freeDailyPracticeSessionLimit - usedSessions;
+    return remaining < 0 ? 0 : remaining;
   }
 }

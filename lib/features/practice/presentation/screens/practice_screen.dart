@@ -9,7 +9,9 @@ import 'package:jahiz/features/practice/presentation/cubit/practice_state.dart';
 enum _ExitChoice { save, discard, cancel }
 
 class PracticeScreen extends StatefulWidget {
-  const PracticeScreen({super.key});
+  const PracticeScreen({super.key, this.isDailyQuestionMode = false});
+
+  final bool isDailyQuestionMode;
 
   @override
   State<PracticeScreen> createState() => _PracticeScreenState();
@@ -22,7 +24,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
   @override
   void initState() {
     super.initState();
-    _cubit = PracticeCubit()..initialize();
+    _cubit = PracticeCubit(isDailyQuestionMode: widget.isDailyQuestionMode)
+      ..initialize();
   }
 
   Future<void> _showSessionSummaryDialog(PracticeState state) async {
@@ -620,7 +623,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
             onWillPop: _handleExitAttempt,
             child: Scaffold(
               appBar: AppBar(
-                title: const Text('Practice Interview'),
+                title: Text(
+                  widget.isDailyQuestionMode
+                      ? 'Daily Question'
+                      : 'Practice Interview',
+                ),
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back_rounded),
                   onPressed: () async {

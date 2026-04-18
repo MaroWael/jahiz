@@ -15,6 +15,7 @@ class HomeState {
     this.notificationCount = 0,
     this.sessionSummary,
     this.activeTabIndex = 0,
+    this.freePracticeSessionsLeft,
     this.popularRoles = const <String>[],
     this.allRoles = const <String>[],
   });
@@ -29,6 +30,7 @@ class HomeState {
   final int notificationCount;
   final SessionSummary? sessionSummary;
   final int activeTabIndex;
+  final int? freePracticeSessionsLeft;
   final List<String> popularRoles;
   final List<String> allRoles;
 
@@ -54,6 +56,7 @@ class HomeState {
     int? notificationCount,
     SessionSummary? sessionSummary,
     int? activeTabIndex,
+    int? freePracticeSessionsLeft,
     List<String>? popularRoles,
     List<String>? allRoles,
     bool clearError = false,
@@ -71,6 +74,8 @@ class HomeState {
       notificationCount: notificationCount ?? this.notificationCount,
       sessionSummary: sessionSummary ?? this.sessionSummary,
       activeTabIndex: activeTabIndex ?? this.activeTabIndex,
+      freePracticeSessionsLeft:
+          freePracticeSessionsLeft ?? this.freePracticeSessionsLeft,
       popularRoles: popularRoles ?? this.popularRoles,
       allRoles: allRoles ?? this.allRoles,
     );

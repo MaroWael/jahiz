@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:jahiz/core/services/premium_access_guard_service.dart';
 import 'package:jahiz/features/auth/presentation/screens/auth_screen.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_cubit.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_state.dart';
-import 'package:jahiz/features/paywall/models/paywall_route_arguments.dart';
-import 'package:jahiz/features/paywall/presentation/screens/paywall_screen.dart';
+import 'package:jahiz/features/home/services/local_storage_service.dart';
 
 class HomeScrean extends StatefulWidget {
   const HomeScrean({super.key});
@@ -38,25 +36,6 @@ class _HomeScreanState extends State<HomeScrean> {
   }
 
   Future<void> _openPractice() async {
-    final accessDecision = await _homeCubit.guardPremiumFeature(
-      feature: PremiumFeature.practiceInterview,
-      deniedHandling: PremiumDeniedHandling.triggerPaywall,
-    );
-
-    if (!accessDecision.isAllowed) {
-      if (accessDecision.shouldTriggerPaywall) {
-        await Navigator.pushNamed(
-          context,
-          PaywallScreen.routeName,
-          arguments: PaywallRouteArguments(
-            featureName: PremiumFeature.practiceInterview.label,
-            message: accessDecision.message,
-          ),
-        );
-      }
-      return;
-    }
-
     await Navigator.pushNamed(context, '/practice');
     if (!mounted) {
       return;
@@ -196,6 +175,48 @@ class _HomeScreanState extends State<HomeScrean> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPracticeQuotaHint(HomeState state) {
+    final user = state.user;
+    if (user == null) {
+      return const SizedBox.shrink();
+    }
+
+    if (user.isPremium) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8F6EE),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Text(
+          'Premium account: unlimited practice sessions today.',
+          style: TextStyle(
+            color: Color(0xFF1D6B44),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+
+    final remaining = state.freePracticeSessionsLeft ?? 0;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E8),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Text(
+        'Free practice sessions left today: $remaining/${LocalStorageService.freeDailyPracticeSessionLimit}',
+        style: const TextStyle(
+          color: Color(0xFF8B4A00),
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -399,6 +420,8 @@ class _HomeScreanState extends State<HomeScrean> {
                     _buildHeader(state),
                     const SizedBox(height: 16),
                     _buildCoachCard(state),
+                    const SizedBox(height: 10),
+                    _buildPracticeQuotaHint(state),
                     const SizedBox(height: 16),
                     _buildProfileSummary(state),
                     const SizedBox(height: 16),

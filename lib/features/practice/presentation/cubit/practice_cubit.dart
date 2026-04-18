@@ -16,24 +16,26 @@ class PracticeCubit extends Cubit<PracticeState> {
     QuestionService? questionService,
     LocalStorageService? localStorageService,
     PracticeSessionSubmissionService? practiceSessionSubmissionService,
-    PremiumAccessGuardService? premiumAccessGuardService,
+    bool isDailyQuestionMode = false,
   }) : _localUserService = localUserService ?? LocalUserService(),
        _questionService = questionService ?? QuestionService(),
        _localStorageService = localStorageService ?? LocalStorageService(),
        _practiceSessionSubmissionService =
            practiceSessionSubmissionService ??
            PracticeSessionSubmissionService(),
-       _premiumAccessGuardService =
-           premiumAccessGuardService ?? const PremiumAccessGuardService(),
+       _isDailyQuestionMode = isDailyQuestionMode,
        super(const PracticeState());
 
   static const int minCharacters = 40;
+  static const int freeDailyPracticeSessionLimit =
+      LocalStorageService.freeDailyPracticeSessionLimit;
+  static const int freeDailyQuestionLimit = 2;
 
   final LocalUserService _localUserService;
   final QuestionService _questionService;
   final LocalStorageService _localStorageService;
   final PracticeSessionSubmissionService _practiceSessionSubmissionService;
-  final PremiumAccessGuardService _premiumAccessGuardService;
+  final bool _isDailyQuestionMode;
 
   Future<void> initialize({bool forceRefresh = false}) async {
     emit(
@@ -48,25 +50,6 @@ class PracticeCubit extends Cubit<PracticeState> {
 
     try {
       final user = await _localUserService.getCurrentUser();
-      final accessDecision = _premiumAccessGuardService.checkAccess(
-        isPremium: user.isPremium,
-        feature: PremiumFeature.practiceInterview,
-      );
-
-      if (!accessDecision.isAllowed) {
-        emit(
-          state.copyWith(
-            isLoadingQuestions: false,
-            isTimeout: false,
-            errorMessage: accessDecision.message,
-            shouldShowPaywall: true,
-            paywallFeatureName: PremiumFeature.practiceInterview.label,
-            paywallMessage: accessDecision.message,
-          ),
-        );
-        return;
-      }
-
       final selectedRole = await _localStorageService.getSelectedRole();
       final activeRole =
           (selectedRole != null && selectedRole.trim().isNotEmpty)
@@ -83,13 +66,65 @@ class PracticeCubit extends Cubit<PracticeState> {
         }
       }
 
+      if (!_isDailyQuestionMode) {
+        final practiceSessionDecision = await _canAccessPracticeSession(user);
+        if (!practiceSessionDecision.isAllowed) {
+          emit(
+            state.copyWith(
+              isLoadingQuestions: false,
+              isTimeout: false,
+              errorMessage: practiceSessionDecision.message,
+              shouldShowPaywall: practiceSessionDecision.shouldTriggerPaywall,
+              paywallFeatureName: practiceSessionDecision.shouldTriggerPaywall
+                  ? 'Practice sessions'
+                  : null,
+              paywallMessage: practiceSessionDecision.shouldTriggerPaywall
+                  ? practiceSessionDecision.message
+                  : null,
+            ),
+          );
+          return;
+        }
+      }
+
+      if (_isDailyQuestionMode) {
+        final dailyQuestionDecision = await _canAccessDailyQuestion(user);
+
+        if (!dailyQuestionDecision.isAllowed) {
+          emit(
+            state.copyWith(
+              isLoadingQuestions: false,
+              isTimeout: false,
+              errorMessage: dailyQuestionDecision.message,
+              shouldShowPaywall: dailyQuestionDecision.shouldTriggerPaywall,
+              paywallFeatureName: dailyQuestionDecision.shouldTriggerPaywall
+                  ? 'Daily questions'
+                  : null,
+              paywallMessage: dailyQuestionDecision.shouldTriggerPaywall
+                  ? dailyQuestionDecision.message
+                  : null,
+            ),
+          );
+          return;
+        }
+      }
+
       final questions = await _questionService
           .getPracticeQuestions(
             role: activeRole,
             level: user.level,
             techStack: user.techStack,
+            count: _isDailyQuestionMode ? 1 : 5,
           )
           .timeout(const Duration(seconds: 12));
+
+      if (!_isDailyQuestionMode) {
+        await _recordPracticeSessionUsage(user);
+      }
+
+      if (_isDailyQuestionMode) {
+        await _recordDailyQuestionUsage(user);
+      }
 
       emit(
         state.copyWith(
@@ -217,23 +252,6 @@ class PracticeCubit extends Cubit<PracticeState> {
   Future<void> submitCurrentAnswer() async {
     final user = state.user;
     if (user == null || !state.hasQuestions) {
-      return;
-    }
-
-    final accessDecision = _premiumAccessGuardService.checkAccess(
-      isPremium: user.isPremium,
-      feature: PremiumFeature.aiEvaluation,
-    );
-    if (!accessDecision.isAllowed) {
-      emit(
-        state.copyWith(
-          errorMessage: accessDecision.message,
-          clearValidationError: true,
-          shouldShowPaywall: true,
-          paywallFeatureName: PremiumFeature.aiEvaluation.label,
-          paywallMessage: accessDecision.message,
-        ),
-      );
       return;
     }
 
@@ -441,6 +459,81 @@ class PracticeCubit extends Cubit<PracticeState> {
 
   Future<void> discardProgress() async {
     await _localStorageService.clearPracticeProgress();
+  }
+
+  Future<PremiumAccessDecision> _canAccessPracticeSession(HomeUser user) async {
+    if (user.isPremium) {
+      return const PremiumAccessDecision.allowed();
+    }
+
+    final uid = _localUserService.authenticatedUser?.uid;
+    if (uid == null || uid.trim().isEmpty) {
+      return const PremiumAccessDecision.deniedWithError(
+        message: 'Unable to verify daily practice usage for this account.',
+      );
+    }
+
+    final usageCount = await _localStorageService
+        .getDailyPracticeSessionUsageCount(uid: uid);
+    if (usageCount >= freeDailyPracticeSessionLimit) {
+      return PremiumAccessDecision.deniedWithPaywall(
+        message:
+            'You reached your free practice limit for today ($freeDailyPracticeSessionLimit sessions). Upgrade to Premium for unlimited practice.',
+      );
+    }
+
+    return const PremiumAccessDecision.allowed();
+  }
+
+  Future<void> _recordPracticeSessionUsage(HomeUser user) async {
+    if (user.isPremium) {
+      return;
+    }
+
+    final uid = _localUserService.authenticatedUser?.uid;
+    if (uid == null || uid.trim().isEmpty) {
+      return;
+    }
+
+    await _localStorageService.incrementDailyPracticeSessionUsage(uid: uid);
+  }
+
+  Future<PremiumAccessDecision> _canAccessDailyQuestion(HomeUser user) async {
+    if (user.isPremium) {
+      return const PremiumAccessDecision.allowed();
+    }
+
+    final uid = _localUserService.authenticatedUser?.uid;
+    if (uid == null || uid.trim().isEmpty) {
+      return const PremiumAccessDecision.deniedWithError(
+        message: 'Unable to verify daily question usage for this account.',
+      );
+    }
+
+    final usageCount = await _localStorageService.getDailyQuestionUsageCount(
+      uid: uid,
+    );
+
+    if (usageCount >= freeDailyQuestionLimit) {
+      return PremiumAccessDecision.deniedWithPaywall(
+        message:
+            'You reached your daily free question limit ($freeDailyQuestionLimit questions). Upgrade to Premium for unlimited access.',
+      );
+    }
+    return const PremiumAccessDecision.allowed();
+  }
+
+  Future<void> _recordDailyQuestionUsage(HomeUser user) async {
+    if (user.isPremium) {
+      return;
+    }
+
+    final uid = _localUserService.authenticatedUser?.uid;
+    if (uid == null || uid.trim().isEmpty) {
+      return;
+    }
+
+    await _localStorageService.incrementDailyQuestionUsage(uid: uid);
   }
 
   void consumePaywallRequest() {

@@ -83,7 +83,7 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       ),
       routes: {
         '/practice': (_) => const PracticeScreen(),
-        '/answer': (_) => const PracticeScreen(),
+        '/answer': (_) => const PracticeScreen(isDailyQuestionMode: true),
         '/reports': (_) => const ReportsScreen(),
         PaywallScreen.routeName: (_) => const PaywallScreen(),
       },
