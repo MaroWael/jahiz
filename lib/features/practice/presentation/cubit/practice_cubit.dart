@@ -42,6 +42,7 @@ class PracticeCubit extends Cubit<PracticeState> {
         isTimeout: false,
         clearError: true,
         clearValidationError: true,
+        clearPaywallRequest: true,
       ),
     );
 
@@ -58,6 +59,9 @@ class PracticeCubit extends Cubit<PracticeState> {
             isLoadingQuestions: false,
             isTimeout: false,
             errorMessage: accessDecision.message,
+            shouldShowPaywall: true,
+            paywallFeatureName: PremiumFeature.practiceInterview.label,
+            paywallMessage: accessDecision.message,
           ),
         );
         return;
@@ -100,6 +104,7 @@ class PracticeCubit extends Cubit<PracticeState> {
           isSessionSubmitting: false,
           isTimeout: false,
           clearError: true,
+          clearPaywallRequest: true,
         ),
       );
     } on TimeoutException {
@@ -108,6 +113,7 @@ class PracticeCubit extends Cubit<PracticeState> {
           isLoadingQuestions: false,
           isTimeout: true,
           errorMessage: 'Request timed out while loading questions.',
+          clearPaywallRequest: true,
         ),
       );
     } catch (error) {
@@ -116,6 +122,7 @@ class PracticeCubit extends Cubit<PracticeState> {
           isLoadingQuestions: false,
           isTimeout: false,
           errorMessage: 'Unable to load practice questions: $error',
+          clearPaywallRequest: true,
         ),
       );
     }
@@ -222,6 +229,9 @@ class PracticeCubit extends Cubit<PracticeState> {
         state.copyWith(
           errorMessage: accessDecision.message,
           clearValidationError: true,
+          shouldShowPaywall: true,
+          paywallFeatureName: PremiumFeature.aiEvaluation.label,
+          paywallMessage: accessDecision.message,
         ),
       );
       return;
@@ -431,5 +441,15 @@ class PracticeCubit extends Cubit<PracticeState> {
 
   Future<void> discardProgress() async {
     await _localStorageService.clearPracticeProgress();
+  }
+
+  void consumePaywallRequest() {
+    if (!state.shouldShowPaywall &&
+        state.paywallFeatureName == null &&
+        state.paywallMessage == null) {
+      return;
+    }
+
+    emit(state.copyWith(clearPaywallRequest: true));
   }
 }

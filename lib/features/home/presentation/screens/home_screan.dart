@@ -4,6 +4,8 @@ import 'package:jahiz/core/services/premium_access_guard_service.dart';
 import 'package:jahiz/features/auth/presentation/screens/auth_screen.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_cubit.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_state.dart';
+import 'package:jahiz/features/paywall/models/paywall_route_arguments.dart';
+import 'package:jahiz/features/paywall/presentation/screens/paywall_screen.dart';
 
 class HomeScrean extends StatefulWidget {
   const HomeScrean({super.key});
@@ -43,8 +45,13 @@ class _HomeScreanState extends State<HomeScrean> {
 
     if (!accessDecision.isAllowed) {
       if (accessDecision.shouldTriggerPaywall) {
-        await _showPremiumPaywall(
-          accessDecision.message ?? 'Upgrade to Premium to use this feature.',
+        await Navigator.pushNamed(
+          context,
+          PaywallScreen.routeName,
+          arguments: PaywallRouteArguments(
+            featureName: PremiumFeature.practiceInterview.label,
+            message: accessDecision.message,
+          ),
         );
       }
       return;
@@ -55,32 +62,6 @@ class _HomeScreanState extends State<HomeScrean> {
       return;
     }
     await _homeCubit.initialize();
-  }
-
-  Future<void> _showPremiumPaywall(String message) async {
-    if (!mounted) {
-      return;
-    }
-
-    await showDialog<void>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Premium Required'),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Not now'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('View plans'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _openAnswer() async {

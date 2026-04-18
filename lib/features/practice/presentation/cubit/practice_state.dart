@@ -12,6 +12,9 @@ class PracticeState {
     this.validationError,
     this.user,
     this.sessionRole,
+    this.shouldShowPaywall = false,
+    this.paywallFeatureName,
+    this.paywallMessage,
     this.questions = const <String>[],
     this.currentIndex = 0,
     this.answers = const <int, String>{},
@@ -27,6 +30,9 @@ class PracticeState {
   final String? validationError;
   final HomeUser? user;
   final String? sessionRole;
+  final bool shouldShowPaywall;
+  final String? paywallFeatureName;
+  final String? paywallMessage;
   final List<String> questions;
   final int currentIndex;
   final Map<int, String> answers;
@@ -77,12 +83,16 @@ class PracticeState {
     String? validationError,
     HomeUser? user,
     String? sessionRole,
+    bool? shouldShowPaywall,
+    String? paywallFeatureName,
+    String? paywallMessage,
     List<String>? questions,
     int? currentIndex,
     Map<int, String>? answers,
     Map<int, PracticeEvaluation>? evaluations,
     bool clearError = false,
     bool clearValidationError = false,
+    bool clearPaywallRequest = false,
   }) {
     return PracticeState(
       isLoadingQuestions: isLoadingQuestions ?? this.isLoadingQuestions,
@@ -96,6 +106,15 @@ class PracticeState {
           : (validationError ?? this.validationError),
       user: user ?? this.user,
       sessionRole: sessionRole ?? this.sessionRole,
+      shouldShowPaywall: clearPaywallRequest
+          ? false
+          : (shouldShowPaywall ?? this.shouldShowPaywall),
+      paywallFeatureName: clearPaywallRequest
+          ? null
+          : (paywallFeatureName ?? this.paywallFeatureName),
+      paywallMessage: clearPaywallRequest
+          ? null
+          : (paywallMessage ?? this.paywallMessage),
       questions: questions ?? this.questions,
       currentIndex: currentIndex ?? this.currentIndex,
       answers: answers ?? this.answers,
