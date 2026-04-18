@@ -23,11 +23,20 @@ class AuthFlowController {
     required String fullName,
   }) async {
     if (isRegisterMode) {
-      await _authService.registerWithEmailAndPassword(
+      final credential = await _authService.registerWithEmailAndPassword(
         email: email,
         password: password,
         fullName: fullName,
       );
+
+      final registeredUser = credential.user;
+      if (registeredUser != null) {
+        await _userProfileService.ensureUserDocumentDefaults(
+          uid: registeredUser.uid,
+          email: registeredUser.email,
+        );
+      }
+
       return PostAuthDestination.emailVerification;
     }
 
@@ -84,6 +93,11 @@ class AuthFlowController {
     if (user == null) {
       return PostAuthDestination.auth;
     }
+
+    await _userProfileService.ensureUserDocumentDefaults(
+      uid: user.uid,
+      email: user.email,
+    );
 
     final hasCompleted = await _userProfileService.hasCompletedOnboarding(
       user.uid,
