@@ -29,7 +29,7 @@ class PracticeCubit extends Cubit<PracticeState> {
   static const int minCharacters = 40;
   static const int freeDailyPracticeSessionLimit =
       LocalStorageService.freeDailyPracticeSessionLimit;
-  static const int freeDailyQuestionLimit = 2;
+  static const int freeDailyQuestionLimit = 1;
 
   final LocalUserService _localUserService;
   final QuestionService _questionService;
@@ -517,7 +517,7 @@ class PracticeCubit extends Cubit<PracticeState> {
     if (usageCount >= freeDailyQuestionLimit) {
       return PremiumAccessDecision.deniedWithPaywall(
         message:
-            'You reached your daily free question limit ($freeDailyQuestionLimit questions). Upgrade to Premium for unlimited access.',
+            'You already used your free streak question for today. Upgrade to Premium for unlimited daily questions.',
       );
     }
     return const PremiumAccessDecision.allowed();

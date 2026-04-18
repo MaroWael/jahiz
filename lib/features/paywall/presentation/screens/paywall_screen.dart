@@ -170,7 +170,7 @@ class PaywallScreen extends StatelessWidget {
             ),
           ),
           const Text(
-            '4.99\$/mo',
+            '49.99\$/mo',
             style: TextStyle(
               fontWeight: FontWeight.w900,
               fontSize: 18,
