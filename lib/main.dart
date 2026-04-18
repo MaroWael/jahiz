@@ -8,6 +8,7 @@ import 'package:jahiz/core/constants/app_colors.dart';
 import 'package:jahiz/core/services/notification_service.dart';
 import 'package:jahiz/firebase_options.dart';
 import 'package:jahiz/features/home/presentation/screens/reports_screen.dart';
+import 'package:jahiz/features/paywall/presentation/screens/paywall_screen.dart';
 import 'package:jahiz/features/practice/presentation/screens/practice_screen.dart';
 import 'package:jahiz/features/splash/presentation/screens/splash_screen.dart';
 
@@ -82,8 +83,9 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       ),
       routes: {
         '/practice': (_) => const PracticeScreen(),
-        '/answer': (_) => const PracticeScreen(),
+        '/answer': (_) => const PracticeScreen(isDailyQuestionMode: true),
         '/reports': (_) => const ReportsScreen(),
+        PaywallScreen.routeName: (_) => const PaywallScreen(),
       },
       home: const SplashScreen(),
     );

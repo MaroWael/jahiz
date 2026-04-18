@@ -39,12 +39,14 @@ class LocalUserService {
     final role = (careerTarget['targetRole'] as String? ?? 'Software Engineer')
         .trim();
     final level = (careerTarget['level'] as String? ?? 'Junior').trim();
+    final isPremium = data['isPremium'] == true;
 
     return HomeUser(
       name: resolvedName,
       role: role.isEmpty ? 'Software Engineer' : role,
       level: level.isEmpty ? 'Junior' : level,
       techStack: techStack,
+      isPremium: isPremium,
     );
   }
 }

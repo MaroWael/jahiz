@@ -14,6 +14,36 @@ class UserProfileService {
     return _userRef(uid).get();
   }
 
+  Future<void> ensureUserDocumentDefaults({
+    required String uid,
+    required String? email,
+  }) async {
+    await _firestore.runTransaction((transaction) async {
+      final ref = _userRef(uid);
+      final snapshot = await transaction.get(ref);
+      final data = snapshot.data() ?? <String, dynamic>{};
+      final update = <String, dynamic>{};
+
+      if (data['isPremium'] == null) {
+        update['isPremium'] = false;
+      }
+
+      final existingEmail = (data['email'] as String?)?.trim() ?? '';
+      final incomingEmail = email?.trim() ?? '';
+      if (existingEmail.isEmpty && incomingEmail.isNotEmpty) {
+        update['email'] = incomingEmail;
+      }
+
+      if (data['createdAt'] == null) {
+        update['createdAt'] = FieldValue.serverTimestamp();
+      }
+
+      if (update.isNotEmpty) {
+        transaction.set(ref, update, SetOptions(merge: true));
+      }
+    });
+  }
+
   Future<bool> hasCompletedOnboarding(String uid) async {
     final snapshot = await _userRef(uid).get();
     if (!snapshot.exists) {
@@ -49,7 +79,9 @@ class UserProfileService {
     await _firestore.runTransaction((transaction) async {
       final ref = _userRef(uid);
       final snapshot = await transaction.get(ref);
-      final existingCreatedAt = snapshot.data()?['createdAt'];
+      final existingData = snapshot.data() ?? <String, dynamic>{};
+      final existingCreatedAt = existingData['createdAt'];
+      final existingIsPremium = existingData['isPremium'];
 
       transaction.set(ref, {
         'userType': userType,
@@ -61,6 +93,7 @@ class UserProfileService {
         'interviewLanguage': interviewLanguage,
         'createdAt': existingCreatedAt ?? FieldValue.serverTimestamp(),
         'email': email,
+        'isPremium': existingIsPremium is bool ? existingIsPremium : false,
       }, SetOptions(merge: true));
     });
   }
