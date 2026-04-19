@@ -55,6 +55,17 @@ class _HomeScreanState extends State<HomeScrean> {
     Navigator.pushNamed(context, '/reports');
   }
 
+  Future<void> _openProfile() async {
+    final result = await Navigator.pushNamed(context, '/profile');
+    if (!mounted) {
+      return;
+    }
+
+    if (result == true) {
+      await _homeCubit.initialize();
+    }
+  }
+
   Future<void> _logout() async {
     final didSignOut = await _homeCubit.signOut();
     if (!didSignOut || !mounted) {
@@ -237,9 +248,20 @@ class _HomeScreanState extends State<HomeScrean> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Your Career Target',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Your Career Target',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _openProfile,
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('Edit'),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           Text('Role: ${user.role}'),
@@ -477,6 +499,8 @@ class _HomeScreanState extends State<HomeScrean> {
                   _openPractice();
                 } else if (index == 2) {
                   _openReports();
+                } else if (index == 3) {
+                  _openProfile();
                 }
               },
               type: BottomNavigationBarType.fixed,
