@@ -56,14 +56,12 @@ class _HomeScreanState extends State<HomeScrean> {
   }
 
   Future<void> _openProfile() async {
-    final result = await Navigator.pushNamed(context, '/profile');
+    await Navigator.pushNamed(context, '/profile');
     if (!mounted) {
       return;
     }
 
-    if (result == true) {
-      await _homeCubit.initialize();
-    }
+    await _homeCubit.initialize();
   }
 
   Future<void> _logout() async {
