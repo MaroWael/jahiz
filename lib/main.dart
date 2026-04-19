@@ -8,8 +8,10 @@ import 'package:jahiz/core/constants/app_colors.dart';
 import 'package:jahiz/core/services/notification_service.dart';
 import 'package:jahiz/firebase_options.dart';
 import 'package:jahiz/features/home/presentation/screens/reports_screen.dart';
+import 'package:jahiz/features/paywall/presentation/screens/payment_screen.dart';
 import 'package:jahiz/features/paywall/presentation/screens/paywall_screen.dart';
 import 'package:jahiz/features/profile_management/presentation/screens/profile_management_screen.dart';
+import 'package:jahiz/features/paywall/presentation/screens/success_screen.dart';
 import 'package:jahiz/features/practice/presentation/screens/practice_screen.dart';
 import 'package:jahiz/features/splash/presentation/screens/splash_screen.dart';
 
@@ -88,6 +90,8 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
         '/reports': (_) => const ReportsScreen(),
         '/profile': (_) => const ProfileManagementScreen(),
         PaywallScreen.routeName: (_) => const PaywallScreen(),
+        PaymentScreen.routeName: (_) => const PaymentScreen(),
+        SuccessScreen.routeName: (_) => const SuccessScreen(),
       },
       home: const SplashScreen(),
     );

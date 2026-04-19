@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jahiz/features/paywall/models/paywall_route_arguments.dart';
+import 'package:jahiz/features/paywall/presentation/screens/payment_screen.dart';
 
 class PaywallScreen extends StatelessWidget {
   const PaywallScreen({super.key});
@@ -70,7 +71,7 @@ class PaywallScreen extends StatelessWidget {
                 ),
               ),
             ),
-            _buildActions(context),
+            _buildActions(context, args),
           ],
         ),
       ),
@@ -222,7 +223,7 @@ class PaywallScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActions(BuildContext context) {
+  Widget _buildActions(BuildContext context, PaywallRouteArguments args) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
       decoration: BoxDecoration(
@@ -240,12 +241,18 @@ class PaywallScreen extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: FilledButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Upgrade flow will be connected soon.'),
-                  ),
-                );
+              onPressed: () async {
+                final result = await Navigator.of(
+                  context,
+                ).pushNamed(PaymentScreen.routeName, arguments: args);
+
+                if (!context.mounted) {
+                  return;
+                }
+
+                if (result == true) {
+                  Navigator.of(context).pop(true);
+                }
               },
               icon: const Icon(Icons.rocket_launch_rounded),
               label: const Text('Upgrade now'),
