@@ -97,4 +97,35 @@ class UserProfileService {
       }, SetOptions(merge: true));
     });
   }
+
+  Future<void> updateCareerProfile({
+    required String uid,
+    required String role,
+    required String level,
+    required List<String> technicalStack,
+  }) async {
+    await _firestore.runTransaction((transaction) async {
+      final ref = _userRef(uid);
+      final snapshot = await transaction.get(ref);
+      final existingData = snapshot.data() ?? <String, dynamic>{};
+      final existingCareerTarget =
+          existingData['careerTarget'] as Map<String, dynamic>? ??
+          <String, dynamic>{};
+
+      final cleanedStack = technicalStack
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty)
+          .toSet()
+          .toList();
+
+      transaction.set(ref, {
+        'careerTarget': {
+          ...existingCareerTarget,
+          'targetRole': role.trim(),
+          'level': level.trim(),
+        },
+        'technicalStack': cleanedStack,
+      }, SetOptions(merge: true));
+    });
+  }
 }
