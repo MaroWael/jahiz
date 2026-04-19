@@ -40,6 +40,12 @@ class LocalStorageService {
     await prefs.setString(lastGeneratedDateKey, generatedAt.toIso8601String());
   }
 
+  Future<void> clearCachedQuestion() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(cachedQuestionKey);
+    await prefs.remove(lastGeneratedDateKey);
+  }
+
   Future<void> saveSelectedRole(String role) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(selectedRoleKey, role);
