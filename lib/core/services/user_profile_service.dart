@@ -128,4 +128,25 @@ class UserProfileService {
       }, SetOptions(merge: true));
     });
   }
+
+  Future<bool> cancelPremiumSubscription({required String uid}) async {
+    return _firestore.runTransaction((transaction) async {
+      final ref = _userRef(uid);
+      final snapshot = await transaction.get(ref);
+      final existingData = snapshot.data() ?? <String, dynamic>{};
+
+      if (existingData['isPremium'] != true) {
+        return false;
+      }
+
+      transaction.set(ref, {
+        'isPremium': false,
+        'premiumCancelledAt': FieldValue.serverTimestamp(),
+        'stripeSubscriptionStatus': 'canceled',
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      return true;
+    });
+  }
 }

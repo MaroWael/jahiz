@@ -104,6 +104,15 @@ class ProfileManagementController {
     await _localStorageService.clearCachedQuestion();
   }
 
+  Future<bool> cancelPremiumSubscription() async {
+    final user = _authService.currentUser;
+    if (user == null) {
+      throw StateError('No authenticated user found.');
+    }
+
+    return _userProfileService.cancelPremiumSubscription(uid: user.uid);
+  }
+
   Future<List<DateTime>> loadInterviewActivityDates({int days = 84}) async {
     final sessions = await _practiceSessionService.getCompletedSessions();
     final cutoff = DateTime.now().toUtc().subtract(Duration(days: days - 1));
