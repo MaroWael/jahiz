@@ -85,10 +85,12 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F6FB),
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         title: const Text('Notifications'),
         actions: [
@@ -133,7 +135,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -163,7 +165,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: const Column(
@@ -185,6 +187,9 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   }
 
   Widget _buildNotificationCard(NotificationInboxItem item) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     final timestamp = item.scheduledFor != null
         ? 'Scheduled for ${_formatDateTime(item.scheduledFor!)}'
         : _formatDateTime(item.createdAt);
@@ -193,15 +198,17 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x110E1644),
-            blurRadius: 14,
-            offset: Offset(0, 8),
-          ),
-        ],
+        boxShadow: isDark
+            ? const []
+            : [
+                BoxShadow(
+                  color: theme.shadowColor.withValues(alpha: 0.12),
+                  blurRadius: 14,
+                  offset: const Offset(0, 8),
+                ),
+              ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,8 +244,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                 const SizedBox(height: 8),
                 Text(
                   timestamp,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant,
                     fontSize: 12,
                   ),
                 ),

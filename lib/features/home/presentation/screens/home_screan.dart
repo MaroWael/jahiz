@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jahiz/core/constants/app_colors.dart';
 import 'package:jahiz/core/services/notification_service.dart';
 import 'package:jahiz/features/auth/presentation/screens/auth_screen.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_cubit.dart';
@@ -216,6 +217,7 @@ class _HomeScreanState extends State<HomeScrean> {
   }
 
   Widget _buildPracticeQuotaHint(HomeState state) {
+    final brightness = Theme.of(context).brightness;
     final user = state.user;
     if (user == null) {
       return const SizedBox.shrink();
@@ -226,13 +228,13 @@ class _HomeScreanState extends State<HomeScrean> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFE8F6EE),
+          color: AppColors.successSurface(brightness),
           borderRadius: BorderRadius.circular(14),
         ),
-        child: const Text(
+        child: Text(
           'Premium account: unlimited practice sessions today.',
           style: TextStyle(
-            color: Color(0xFF1D6B44),
+            color: AppColors.successText(brightness),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -244,13 +246,13 @@ class _HomeScreanState extends State<HomeScrean> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF4E8),
+        color: AppColors.warningSurface(brightness),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Text(
         'Free practice sessions left today: $remaining/${LocalStorageService.freeDailyPracticeSessionLimit}',
-        style: const TextStyle(
-          color: Color(0xFF8B4A00),
+        style: TextStyle(
+          color: AppColors.warningText(brightness),
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -263,10 +265,11 @@ class _HomeScreanState extends State<HomeScrean> {
       return const SizedBox.shrink();
     }
 
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -297,13 +300,15 @@ class _HomeScreanState extends State<HomeScrean> {
   }
 
   Widget _buildSearchBar(HomeState state) {
+    final theme = Theme.of(context);
+
     return TextField(
       controller: _searchController,
       onChanged: _homeCubit.updateSearchQuery,
       decoration: InputDecoration(
         hintText: 'Search job roles...',
         prefixIcon: const Icon(Icons.search),
-        fillColor: Colors.white,
+        fillColor: theme.colorScheme.surface,
         filled: true,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -382,10 +387,12 @@ class _HomeScreanState extends State<HomeScrean> {
   }
 
   Widget _buildDailyQuestion(HomeState state) {
+    final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -416,6 +423,8 @@ class _HomeScreanState extends State<HomeScrean> {
   }
 
   Widget _buildSessionSummary(HomeState state) {
+    final theme = Theme.of(context);
+
     final summary = state.sessionSummary;
     if (summary == null) {
       return const SizedBox.shrink();
@@ -424,7 +433,7 @@ class _HomeScreanState extends State<HomeScrean> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -456,7 +465,7 @@ class _HomeScreanState extends State<HomeScrean> {
       child: BlocBuilder<HomeCubit, HomeState>(
         builder: (context, state) {
           return Scaffold(
-            backgroundColor: const Color(0xFFF4F6FB),
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             body: SafeArea(
               child: RefreshIndicator(
                 onRefresh: _refreshHome,

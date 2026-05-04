@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:jahiz/core/constants/app_colors.dart';
 import 'package:jahiz/core/services/notification_service.dart';
+import 'package:jahiz/core/services/theme_controller.dart';
+import 'package:jahiz/core/theme/app_theme.dart';
 import 'package:jahiz/firebase_options.dart';
 import 'package:jahiz/features/home/presentation/screens/reports_screen.dart';
 import 'package:jahiz/features/paywall/presentation/screens/payment_screen.dart';
@@ -34,6 +35,8 @@ Future<void> main() async {
       _navigatorKey.currentState?.pushNamed(payload);
     },
   );
+
+  await AppThemeController.instance.loadThemeMode();
 
   runApp(const MainApp());
 }
@@ -80,26 +83,29 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      navigatorKey: _navigatorKey,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
-        scaffoldBackgroundColor: AppColors.background,
-      ),
-      routes: {
-        '/practice': (_) => const PracticeScreen(),
-        '/answer': (_) => const PracticeScreen(isDailyQuestionMode: true),
-        '/reports': (_) => const ReportsScreen(),
-        '/profile': (_) => const ProfileManagementScreen(),
-        NotificationCenterScreen.routeName: (_) =>
-            const NotificationCenterScreen(),
-        PaywallScreen.routeName: (_) => const PaywallScreen(),
-        PaymentScreen.routeName: (_) => const PaymentScreen(),
-        SuccessScreen.routeName: (_) => const SuccessScreen(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: AppThemeController.instance.themeMode,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          navigatorKey: _navigatorKey,
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: mode,
+          routes: {
+            '/practice': (_) => const PracticeScreen(),
+            '/answer': (_) => const PracticeScreen(isDailyQuestionMode: true),
+            '/reports': (_) => const ReportsScreen(),
+            '/profile': (_) => const ProfileManagementScreen(),
+            NotificationCenterScreen.routeName: (_) =>
+                const NotificationCenterScreen(),
+            PaywallScreen.routeName: (_) => const PaywallScreen(),
+            PaymentScreen.routeName: (_) => const PaymentScreen(),
+            SuccessScreen.routeName: (_) => const SuccessScreen(),
+          },
+          home: const SplashScreen(),
+        );
       },
-      home: const SplashScreen(),
     );
   }
 }

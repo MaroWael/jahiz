@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:jahiz/core/constants/app_colors.dart';
 import 'package:jahiz/features/auth/presentation/controllers/auth_flow_controller.dart';
 import 'package:jahiz/features/auth/presentation/screens/auth_screen.dart';
 import 'package:jahiz/features/home/presentation/screens/home_screan.dart';
@@ -110,12 +109,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final email = _authFlowController.currentUserEmail;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: theme.scaffoldBackgroundColor,
         title: const Text('Verify Email'),
         centerTitle: true,
       ),
@@ -127,18 +127,18 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.mark_email_read_outlined,
-                  color: AppColors.primary,
+                  color: theme.colorScheme.primary,
                   size: 74,
                 ),
                 const SizedBox(height: 14),
-                const Text(
+                Text(
                   'Verify your email address',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: theme.colorScheme.onSurface,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -146,7 +146,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 Text(
                   'We sent a verification link to $email. Please verify your email before continuing.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -155,8 +155,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _refreshVerificationStatus,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
                     ),
                     child: _isLoading
                         ? const SizedBox(

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum NotificationPermissionState { unknown, granted, denied }
@@ -9,6 +10,7 @@ class AppPreferencesService {
   static const String dailyPracticeReminderScheduledKey =
       'daily_practice_reminder_scheduled';
   static const String lastKnownTimeZoneKey = 'notification_last_timezone';
+  static const String themeModeKey = 'theme_mode';
 
   Future<bool> hasSeenOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
@@ -57,6 +59,17 @@ class AppPreferencesService {
     await prefs.setString(lastKnownTimeZoneKey, timeZone);
   }
 
+  Future<ThemeMode> getThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(themeModeKey);
+    return _themeModeFromString(raw);
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(themeModeKey, mode.name);
+  }
+
   NotificationPermissionState _notificationStateFromString(String? value) {
     switch (value) {
       case 'granted':
@@ -65,6 +78,19 @@ class AppPreferencesService {
         return NotificationPermissionState.denied;
       default:
         return NotificationPermissionState.unknown;
+    }
+  }
+
+  ThemeMode _themeModeFromString(String? value) {
+    switch (value) {
+      case 'dark':
+        return ThemeMode.dark;
+      case 'light':
+        return ThemeMode.light;
+      case 'system':
+        return ThemeMode.system;
+      default:
+        return ThemeMode.light;
     }
   }
 }
