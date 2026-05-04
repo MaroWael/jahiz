@@ -13,6 +13,7 @@ import 'package:jahiz/features/paywall/presentation/screens/paywall_screen.dart'
 import 'package:jahiz/features/profile_management/presentation/screens/profile_management_screen.dart';
 import 'package:jahiz/features/paywall/presentation/screens/success_screen.dart';
 import 'package:jahiz/features/practice/presentation/screens/practice_screen.dart';
+import 'package:jahiz/features/notifications/presentation/screens/notification_center_screen.dart';
 import 'package:jahiz/features/splash/presentation/screens/splash_screen.dart';
 
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
@@ -58,6 +59,9 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(_resetFollowUpReminder());
+      unawaited(
+        NotificationService.instance.refreshDailyPracticeReminderIfAllowed(),
+      );
     }
   }
 
@@ -89,6 +93,8 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
         '/answer': (_) => const PracticeScreen(isDailyQuestionMode: true),
         '/reports': (_) => const ReportsScreen(),
         '/profile': (_) => const ProfileManagementScreen(),
+        NotificationCenterScreen.routeName: (_) =>
+            const NotificationCenterScreen(),
         PaywallScreen.routeName: (_) => const PaywallScreen(),
         PaymentScreen.routeName: (_) => const PaymentScreen(),
         SuccessScreen.routeName: (_) => const SuccessScreen(),

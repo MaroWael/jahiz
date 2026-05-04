@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jahiz/core/services/auth_service.dart';
+import 'package:jahiz/core/services/notification_inbox_service.dart';
 import 'package:jahiz/core/services/premium_access_guard_service.dart';
 import 'package:jahiz/features/home/models/home_user.dart';
 import 'package:jahiz/features/home/models/session_summary.dart';
@@ -17,6 +18,7 @@ class HomeCubit extends Cubit<HomeState> {
     SessionSummaryService? sessionSummaryService,
     AuthService? authService,
     PremiumAccessGuardService? premiumAccessGuardService,
+    NotificationInboxService? notificationInboxService,
   }) : _localUserService = localUserService ?? LocalUserService(),
        _questionService = questionService ?? QuestionService(),
        _localStorageService = localStorageService ?? LocalStorageService(),
@@ -25,6 +27,8 @@ class HomeCubit extends Cubit<HomeState> {
        _authService = authService ?? AuthService(),
        _premiumAccessGuardService =
            premiumAccessGuardService ?? const PremiumAccessGuardService(),
+       _notificationInboxService =
+           notificationInboxService ?? NotificationInboxService(),
        super(const HomeState());
 
   final LocalUserService _localUserService;
@@ -33,6 +37,7 @@ class HomeCubit extends Cubit<HomeState> {
   final SessionSummaryService _sessionSummaryService;
   final AuthService _authService;
   final PremiumAccessGuardService _premiumAccessGuardService;
+  final NotificationInboxService _notificationInboxService;
 
   Future<PremiumAccessDecision> guardPremiumFeature({
     required PremiumFeature feature,
@@ -82,6 +87,8 @@ class HomeCubit extends Cubit<HomeState> {
       final freePracticeSessionsLeft = await _resolveFreePracticeSessionsLeft(
         user,
       );
+      final notificationCount = await _notificationInboxService
+          .getUnreadCount();
       SessionSummary? sessionSummary;
       try {
         sessionSummary = await _sessionSummaryService.getLastSessionSummary();
@@ -99,7 +106,7 @@ class HomeCubit extends Cubit<HomeState> {
               ? 'Choose a role to start practicing'
               : 'Ready to practice for your $activeRole interview?',
           dailyQuestion: question,
-          notificationCount: 3,
+          notificationCount: notificationCount,
           sessionSummary: sessionSummary,
           freePracticeSessionsLeft: freePracticeSessionsLeft,
           popularRoles: popularRoles,
