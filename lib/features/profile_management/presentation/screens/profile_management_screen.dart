@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:jahiz/core/constants/app_colors.dart';
 import 'package:jahiz/features/home/models/practice_session_record.dart';
+import 'package:jahiz/features/paywall/services/payment_service.dart';
 import 'package:jahiz/features/profile_management/presentation/controllers/profile_management_controller.dart';
 
 class ProfileManagementScreen extends StatefulWidget {
@@ -19,6 +20,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
   static const int _activityWeeks = 12;
 
   final ProfileManagementController _controller = ProfileManagementController();
+  final PaymentService _paymentService = PaymentService();
   final TextEditingController _roleController = TextEditingController();
   final TextEditingController _stackController = TextEditingController();
 
@@ -43,6 +45,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   bool _isEditing = false;
+  bool _isCancellingPremium = false;
 
   bool get _isFormValid {
     return _roleController.text.trim().isNotEmpty &&
@@ -194,6 +197,99 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Future<bool> _confirmCancelPremium() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Cancel Premium subscription?'),
+          content: const Text(
+            'Your Premium access will end immediately, and premium-only '
+            'features will be locked. You can upgrade again anytime.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Keep Premium'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Cancel Premium'),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result ?? false;
+  }
+
+  Future<void> _handleCancelPremium() async {
+    if (_isCancellingPremium) {
+      return;
+    }
+
+    if (!_isPremium) {
+      _showSnackBar('You do not have an active Premium subscription.');
+      return;
+    }
+
+    final confirmed = await _confirmCancelPremium();
+    if (!confirmed) {
+      return;
+    }
+
+    setState(() => _isCancellingPremium = true);
+
+    try {
+      final cancelled = await _controller.cancelPremiumSubscription();
+      if (!cancelled) {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() => _isCancellingPremium = false);
+        _showSnackBar('Premium is already inactive for this account.');
+        return;
+      }
+
+      try {
+        await _paymentService.clearPendingPremiumUnlock();
+      } catch (_) {
+        // Local cleanup failure should not block premium cancellation.
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isCancellingPremium = false;
+        _isPremium = false;
+      });
+
+      _showSnackBar('Premium subscription cancelled.');
+    } on StateError {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _isCancellingPremium = false);
+      _showSnackBar('Please sign in again to manage your subscription.');
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _isCancellingPremium = false);
+      if (_isNetworkSyncFailure(error)) {
+        _showSnackBar('Check your internet connection');
+      } else {
+        _showSnackBar('Failed to cancel Premium. Please try again.');
       }
     }
   }
@@ -560,6 +656,83 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSubscriptionSection() {
+    return _buildSoftCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFECEC),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.workspace_premium_rounded,
+                  color: Color(0xFFD14343),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Premium subscription',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _isPremium ? 'Status: Active' : 'Status: Inactive',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Canceling ends Premium immediately and locks premium-only '
+            'features. You can upgrade again anytime.',
+            style: TextStyle(color: AppColors.textSecondary, height: 1.35),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _isCancellingPremium ? null : _handleCancelPremium,
+              icon: _isCancellingPremium
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.cancel_rounded),
+              label: Text(
+                _isCancellingPremium ? 'Cancelling...' : 'Cancel subscription',
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFD14343),
+                side: const BorderSide(color: Color(0xFFF0C3C3)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1113,6 +1286,10 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                     _buildProfileSection(),
                     const SizedBox(height: 16),
                     _buildPrimaryActions(),
+                    if (_isPremium) ...[
+                      const SizedBox(height: 16),
+                      _buildSubscriptionSection(),
+                    ],
                     if (_isEditing) ...[
                       const SizedBox(height: 16),
                       _buildEditFormCard(),
