@@ -51,6 +51,7 @@ class _HomeScreanState extends State<HomeScrean> {
     if (!mounted) {
       return;
     }
+    _homeCubit.updateTabIndex(0);
     await _homeCubit.initialize();
   }
 
@@ -59,11 +60,16 @@ class _HomeScreanState extends State<HomeScrean> {
     if (!mounted) {
       return;
     }
+    _homeCubit.updateTabIndex(0);
     await _homeCubit.initialize();
   }
 
-  void _openReports() {
-    Navigator.pushNamed(context, '/reports');
+  Future<void> _openReports() async {
+    await Navigator.pushNamed(context, '/reports');
+    if (!mounted) {
+      return;
+    }
+    _homeCubit.updateTabIndex(0);
   }
 
   Future<void> _openProfile() async {
@@ -71,7 +77,7 @@ class _HomeScreanState extends State<HomeScrean> {
     if (!mounted) {
       return;
     }
-
+    _homeCubit.updateTabIndex(0);
     await _homeCubit.initialize();
   }
 
@@ -80,7 +86,7 @@ class _HomeScreanState extends State<HomeScrean> {
     if (!mounted) {
       return;
     }
-
+    _homeCubit.updateTabIndex(0);
     await _homeCubit.initialize();
   }
 
