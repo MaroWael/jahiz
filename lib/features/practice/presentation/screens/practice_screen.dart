@@ -35,6 +35,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) {
+        final theme = Theme.of(context);
         return AlertDialog(
           title: const Text('Interview Session Summary'),
           content: SingleChildScrollView(
@@ -46,17 +47,17 @@ class _PracticeScreenState extends State<PracticeScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F7FF),
+                    color: theme.colorScheme.surfaceVariant,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Average Score',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF4E5B75),
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -178,7 +179,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
             height: height,
             margin: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.grey.shade300.withValues(alpha: value),
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceVariant.withValues(alpha: value),
               borderRadius: BorderRadius.circular(10),
             ),
           );
@@ -229,6 +232,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
 
   Widget _buildQuestionCard(PracticeState state) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final progress = state.questions.isEmpty
         ? 0.0
         : (state.currentIndex + 1) / state.questions.length;
@@ -254,13 +259,22 @@ class _PracticeScreenState extends State<PracticeScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: <Color>[Color(0xFFF7F8FF), Color(0xFFEFF3FF)],
+          gradient: LinearGradient(
+            colors: isDark
+                ? <Color>[
+                    theme.colorScheme.surface,
+                    theme.colorScheme.surfaceVariant,
+                  ]
+                : const <Color>[Color(0xFFF7F8FF), Color(0xFFEFF3FF)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFD9E3FF)),
+          border: Border.all(
+            color: isDark
+                ? theme.colorScheme.outlineVariant
+                : const Color(0xFFD9E3FF),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -292,18 +306,18 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     child: LinearProgressIndicator(
                       value: progress,
                       minHeight: 8,
-                      backgroundColor: Colors.white,
+                      backgroundColor: theme.colorScheme.surface,
                     ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 14),
-            const Text(
+            Text(
               'Interview Prompt',
               style: TextStyle(
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF5B6275),
+                color: theme.colorScheme.onSurfaceVariant,
                 fontSize: 12,
               ),
             ),
@@ -323,6 +337,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
 
   Widget _buildEvaluationCard(PracticeState state) {
+    final theme = Theme.of(context);
     final evaluation = state.currentEvaluation;
     if (evaluation == null) {
       return const SizedBox.shrink();
@@ -340,9 +355,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
       margin: const EdgeInsets.only(top: 14),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FBFF),
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFD6E2FF)),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,16 +398,16 @@ class _PracticeScreenState extends State<PracticeScreen> {
             child: LinearProgressIndicator(
               value: normalized,
               minHeight: 10,
-              backgroundColor: const Color(0xFFE6ECFF),
+              backgroundColor: theme.colorScheme.surfaceVariant,
               color: const Color(0xFF1E88E5),
             ),
           ),
           const SizedBox(height: 6),
           Text(
             'Overall: $gradeLabel',
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: Color(0xFF55607A),
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 10),
@@ -422,14 +437,16 @@ class _PracticeScreenState extends State<PracticeScreen> {
     required Color headerColor,
     bool renderAsMarkdown = false,
   }) {
+    final theme = Theme.of(context);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F7)),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        data: theme.copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 12),
           childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -472,6 +489,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
 
   Widget _buildBottomActionBar(PracticeState state) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     final isFirst = state.currentIndex == 0;
     final isLast = state.currentIndex >= state.questions.length - 1;
     final hasEvaluation = state.currentEvaluation != null;
@@ -481,15 +501,19 @@ class _PracticeScreenState extends State<PracticeScreen> {
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Colors.grey.shade200)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, -2),
-            ),
-          ],
+          color: theme.colorScheme.surface,
+          border: Border(
+            top: BorderSide(color: theme.colorScheme.outlineVariant),
+          ),
+          boxShadow: isDark
+              ? const []
+              : [
+                  BoxShadow(
+                    color: theme.shadowColor.withValues(alpha: 0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -566,8 +590,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
             const SizedBox(height: 8),
             Text(
               'Answered ${state.submittedAnswersCount}/${state.questions.length}',
-              style: const TextStyle(
-                color: Color(0xFF5B6275),
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -619,6 +643,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
           }
         },
         builder: (context, state) {
+          final theme = Theme.of(context);
+
           return WillPopScope(
             onWillPop: _handleExitAttempt,
             child: Scaffold(
@@ -678,7 +704,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                               hintText:
                                   'Explain your thought process clearly and use concrete examples.',
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: theme.colorScheme.surface,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -687,7 +713,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
                           const SizedBox(height: 8),
                           Text(
                             'Minimum ${PracticeCubit.minCharacters} characters • Current ${state.currentAnswer.trim().length}',
-                            style: const TextStyle(color: Colors.black54),
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
                           if (state.validationError != null) ...[
                             const SizedBox(height: 6),
@@ -704,10 +732,10 @@ class _PracticeScreenState extends State<PracticeScreen> {
                             ),
                           ],
                           const SizedBox(height: 12),
-                          const Text(
+                          Text(
                             'Tap Submit in the bottom bar to get AI review.',
                             style: TextStyle(
-                              color: Color(0xFF566079),
+                              color: theme.colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.w500,
                             ),
                           ),

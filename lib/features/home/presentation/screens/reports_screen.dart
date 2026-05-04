@@ -113,18 +113,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildSurfaceCard({required Widget child}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x15001A72),
-            blurRadius: 16,
-            offset: Offset(0, 8),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(
+            alpha: isDark ? 0.6 : 0.3,
           ),
-        ],
+        ),
+        boxShadow: isDark
+            ? const []
+            : [
+                BoxShadow(
+                  color: theme.shadowColor.withValues(alpha: 0.12),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
       ),
       child: child,
     );
@@ -185,6 +195,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildWeakAreaCard(ReportsState state, WeakArea weakArea) {
+    final theme = Theme.of(context);
     final isExpanded = state.expandedWeakAreaTopics.contains(weakArea.topic);
     final hasMore = weakArea.lowQuestions.length > _weakAreaPreviewCount;
     final visibleQuestions = isExpanded
@@ -196,7 +207,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F8FF),
+          color: theme.colorScheme.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -251,13 +262,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFEFEF),
+                  color: theme.colorScheme.errorContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   '${weakArea.averageScorePercent.toStringAsFixed(1)}%',
-                  style: const TextStyle(
-                    color: Color(0xFFB3261E),
+                  style: TextStyle(
+                    color: theme.colorScheme.onErrorContainer,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -266,10 +277,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
           if (visibleQuestions.isNotEmpty) ...[
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Questions below 50%',
               style: TextStyle(
-                color: Colors.black54,
+                color: theme.colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
                 fontSize: 12,
               ),
@@ -307,6 +318,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildEmptyState() {
+    final theme = Theme.of(context);
+
     return _buildSurfaceCard(
       child: Column(
         children: [
@@ -314,7 +327,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color: const Color(0xFFEAF2FF),
+              color: theme.colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(18),
             ),
             child: const Icon(
@@ -329,10 +342,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Start your first practice session to see your average score, history, and weak areas.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.black54, height: 1.35),
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.35,
+            ),
           ),
           const SizedBox(height: 14),
           SizedBox(
@@ -348,6 +364,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   List<Widget> _buildHistorySection(ReportsState state) {
+    final theme = Theme.of(context);
+
     if (state.historySessions.isEmpty && state.isHistoryLoading) {
       return const <Widget>[
         SizedBox(height: 16),
@@ -360,7 +378,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(18),
           ),
           child: Column(
@@ -383,7 +401,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(18),
           ),
           child: const Text('No completed sessions yet.'),
@@ -426,9 +444,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       const SizedBox(height: 6),
                       Text(
                         _formatDate(session.date),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w500,
-                          color: Colors.black54,
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -483,20 +501,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return BlocProvider<ReportsCubit>.value(
       value: _reportsCubit,
       child: BlocBuilder<ReportsCubit, ReportsState>(
         builder: (context, state) {
           if (state.isLoadingMetrics && state.metrics == null) {
-            return const Scaffold(
-              backgroundColor: Color(0xFFF4F6FB),
-              body: Center(child: CircularProgressIndicator()),
+            return Scaffold(
+              backgroundColor: theme.scaffoldBackgroundColor,
+              body: const Center(child: CircularProgressIndicator()),
             );
           }
 
           if (state.metricsError != null && state.metrics == null) {
             return Scaffold(
-              backgroundColor: const Color(0xFFF4F6FB),
+              backgroundColor: theme.scaffoldBackgroundColor,
               appBar: AppBar(title: const Text('Reports')),
               body: RefreshIndicator(
                 onRefresh: _refresh,
@@ -522,7 +542,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               );
 
           return Scaffold(
-            backgroundColor: const Color(0xFFF4F6FB),
+            backgroundColor: theme.scaffoldBackgroundColor,
             appBar: AppBar(title: const Text('Reports')),
             body: RefreshIndicator(
               onRefresh: _refresh,
@@ -553,10 +573,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Average Score',
                               style: TextStyle(
-                                color: Colors.black54,
+                                color: theme.colorScheme.onSurfaceVariant,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -580,7 +600,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             const SizedBox(height: 8),
                             Text(
                               'Across ${metrics.sessionCount} completed sessions',
-                              style: const TextStyle(color: Colors.black54),
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),

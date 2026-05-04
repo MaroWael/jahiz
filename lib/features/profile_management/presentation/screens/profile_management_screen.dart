@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:jahiz/core/constants/app_colors.dart';
+import 'package:jahiz/core/services/theme_controller.dart';
 import 'package:jahiz/features/home/models/practice_session_record.dart';
 import 'package:jahiz/features/paywall/services/payment_service.dart';
 import 'package:jahiz/features/profile_management/presentation/controllers/profile_management_controller.dart';
@@ -21,6 +22,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
 
   final ProfileManagementController _controller = ProfileManagementController();
   final PaymentService _paymentService = PaymentService();
+  final AppThemeController _themeController = AppThemeController.instance;
   final TextEditingController _roleController = TextEditingController();
   final TextEditingController _stackController = TextEditingController();
 
@@ -450,19 +452,111 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
     return '${score.round()}%';
   }
 
+  void _openSettingsSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Settings',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildThemeToggleTile(compact: true),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildThemeToggleTile({bool compact = false}) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: _themeController.themeMode,
+      builder: (context, mode, _) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+        final subtitleStyle = theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        );
+
+        return SwitchListTile.adaptive(
+          value: isDark,
+          onChanged: (value) {
+            _themeController.setThemeMode(
+              value ? ThemeMode.dark : ThemeMode.light,
+            );
+          },
+          dense: compact,
+          contentPadding: compact
+              ? EdgeInsets.zero
+              : const EdgeInsets.symmetric(horizontal: 4),
+          secondary: Icon(
+            isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+          ),
+          title: Text(
+            'Dark mode',
+            style: compact
+                ? theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  )
+                : theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+          ),
+          subtitle: compact
+              ? null
+              : Text('Use darker colors across the app.', style: subtitleStyle),
+        );
+      },
+    );
+  }
+
+  Widget _buildAppearanceSection() {
+    return _buildSoftCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: _buildThemeToggleTile(),
+    );
+  }
+
   Widget _buildSoftCard({required Widget child, EdgeInsets? padding}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       padding: padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x110E1644),
-            blurRadius: 20,
-            offset: Offset(0, 10),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(
+            alpha: isDark ? 0.6 : 0.3,
           ),
-        ],
+        ),
+        boxShadow: isDark
+            ? const []
+            : [
+                BoxShadow(
+                  color: theme.shadowColor.withValues(alpha: 0.12),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
       ),
       child: child,
     );
@@ -484,7 +578,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
         ),
         _buildCircleIconButton(
           icon: Icons.settings_outlined,
-          onTap: () => _showSnackBar('Settings screen is not available yet.'),
+          onTap: _openSettingsSheet,
         ),
       ],
     );
@@ -494,28 +588,36 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
     required IconData icon,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.colorScheme.surface,
           shape: BoxShape.circle,
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x14000000),
-              blurRadius: 14,
-              offset: Offset(0, 6),
-            ),
-          ],
+          border: Border.all(color: theme.colorScheme.outlineVariant),
+          boxShadow: isDark
+              ? const []
+              : [
+                  BoxShadow(
+                    color: theme.shadowColor.withValues(alpha: 0.14),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
         ),
-        child: Icon(icon, size: 20, color: AppColors.textPrimary),
+        child: Icon(icon, size: 20, color: theme.colorScheme.onSurface),
       ),
     );
   }
 
   Widget _buildProfileSection() {
+    final theme = Theme.of(context);
+
     return SizedBox(
       width: double.infinity,
       child: _buildSoftCard(
@@ -588,7 +690,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
             Text(
               _email.isEmpty ? 'No email available' : _email,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -597,6 +699,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
   }
 
   Widget _buildPrimaryActions() {
+    final theme = Theme.of(context);
+
     return Column(
       children: [
         SizedBox(
@@ -638,10 +742,10 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Target Job Role',
                       style: TextStyle(
-                        color: AppColors.textSecondary,
+                        color: theme.colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -660,6 +764,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
   }
 
   Widget _buildSubscriptionSection() {
+    final theme = Theme.of(context);
+
     return _buildSoftCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -690,8 +796,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                     const SizedBox(height: 2),
                     Text(
                       _isPremium ? 'Status: Active' : 'Status: Inactive',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -701,10 +807,13 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Canceling ends Premium immediately and locks premium-only '
             'features. You can upgrade again anytime.',
-            style: TextStyle(color: AppColors.textSecondary, height: 1.35),
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.35,
+            ),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -779,6 +888,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
     required Color iconBackground,
     required Color iconColor,
   }) {
+    final theme = Theme.of(context);
+
     return _buildSoftCard(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
       child: Column(
@@ -801,9 +912,9 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               height: 1.2,
-              color: AppColors.textSecondary,
+              color: theme.colorScheme.onSurfaceVariant,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -814,6 +925,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
   }
 
   Widget _buildActivityCard() {
+    final theme = Theme.of(context);
+
     final now = DateTime.now();
     final endDate = DateTime(now.year, now.month, now.day);
     final startDate = endDate.subtract(
@@ -843,7 +956,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
           Text(
             '$totalInterviews interviews in the last $_activityWeeks weeks',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
           Center(
@@ -894,9 +1007,12 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
+              Text(
                 'Less',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                style: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(width: 6),
               ...List<Widget>.generate(5, (index) {
@@ -913,9 +1029,12 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                 );
               }),
               const SizedBox(width: 6),
-              const Text(
+              Text(
                 'More',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                style: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
@@ -940,21 +1059,26 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
   }
 
   Widget _buildTinyMetricChip({required String label, required String value}) {
+    final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F5FF),
+        color: theme.colorScheme.surfaceVariant,
         borderRadius: BorderRadius.circular(999),
       ),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          style: TextStyle(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontSize: 12,
+          ),
           children: [
             TextSpan(text: '$label: '),
             TextSpan(
               text: value,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
+              style: TextStyle(
+                color: theme.colorScheme.onSurface,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1017,6 +1141,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
   }
 
   Widget _buildAchievementActiveCard() {
+    final theme = Theme.of(context);
+
     return _buildAchievementCardShell(
       child: Column(
         children: [
@@ -1046,8 +1172,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
               fontSize: 12,
             ),
           ),
@@ -1057,6 +1183,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
   }
 
   Widget _buildAchievementProgressCard(double progress) {
+    final theme = Theme.of(context);
+
     return _buildAchievementCardShell(
       child: Column(
         children: [
@@ -1091,8 +1219,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
               fontSize: 12,
             ),
           ),
@@ -1102,6 +1230,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
   }
 
   Widget _buildAchievementLockedCard({required bool isUnlocked}) {
+    final theme = Theme.of(context);
+
     final title = isUnlocked ? 'Premium Profile' : 'Premium Profile';
     final subtitle = isUnlocked ? 'Unlocked' : 'Upgrade to unlock';
 
@@ -1138,8 +1268,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
               fontSize: 12,
             ),
           ),
@@ -1268,8 +1398,10 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FE),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -1286,6 +1418,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                     _buildProfileSection(),
                     const SizedBox(height: 16),
                     _buildPrimaryActions(),
+                    const SizedBox(height: 16),
+                    _buildAppearanceSection(),
                     if (_isPremium) ...[
                       const SizedBox(height: 16),
                       _buildSubscriptionSection(),
@@ -1307,8 +1441,6 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 3,
-        selectedItemColor: const Color(0xFF6C63FF),
-        unselectedItemColor: AppColors.textSecondary,
         onTap: _onBottomNavTapped,
         type: BottomNavigationBarType.fixed,
         items: const [

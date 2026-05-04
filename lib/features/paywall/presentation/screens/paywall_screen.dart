@@ -9,6 +9,7 @@ class PaywallScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final routeArgs = ModalRoute.of(context)?.settings.arguments;
     final args = routeArgs is PaywallRouteArguments
         ? routeArgs
@@ -28,7 +29,7 @@ class PaywallScreen extends StatelessWidget {
         : args.featureHighlights;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FC),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -40,29 +41,31 @@ class PaywallScreen extends StatelessWidget {
                   children: [
                     _buildHero(args: args, message: message),
                     const SizedBox(height: 18),
-                    _buildPlanCard(),
+                    _buildPlanCard(context),
                     const SizedBox(height: 18),
                     Text(
                       'What you unlock',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFF20263A),
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 10),
-                    ...highlights.map(_buildHighlightTile),
+                    ...highlights.map(
+                      (text) => _buildHighlightTile(context, text),
+                    ),
                     const SizedBox(height: 10),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEAF0FF),
+                        color: theme.colorScheme.secondaryContainer,
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Text(
+                      child: Text(
                         'No commitment: cancel anytime from your account settings.',
                         style: TextStyle(
-                          color: Color(0xFF30436D),
+                          color: theme.colorScheme.onSecondaryContainer,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -133,14 +136,16 @@ class PaywallScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPlanCard() {
+  Widget _buildPlanCard(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFDCE3F7)),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Row(
         children: [
@@ -154,28 +159,31 @@ class PaywallScreen extends StatelessWidget {
             child: const Icon(Icons.bolt_rounded, color: Color(0xFFCE8A00)),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Premium Plan',
                   style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
                   'Best for interview-focused weekly practice',
-                  style: TextStyle(color: Color(0xFF5F6B89), height: 1.25),
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.25,
+                  ),
                 ),
               ],
             ),
           ),
-          const Text(
+          Text(
             '49.99\$/mo',
             style: TextStyle(
               fontWeight: FontWeight.w900,
               fontSize: 18,
-              color: Color(0xFF1E2C4F),
+              color: theme.colorScheme.onSurface,
             ),
           ),
         ],
@@ -183,12 +191,14 @@ class PaywallScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHighlightTile(String text) {
+  Widget _buildHighlightTile(BuildContext context, String text) {
+    final theme = Theme.of(context);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -198,7 +208,7 @@ class PaywallScreen extends StatelessWidget {
             width: 26,
             height: 26,
             decoration: BoxDecoration(
-              color: const Color(0xFFE5ECFF),
+              color: theme.colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
@@ -211,8 +221,8 @@ class PaywallScreen extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                color: Color(0xFF253251),
+              style: TextStyle(
+                color: theme.colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
                 height: 1.35,
               ),
@@ -224,11 +234,15 @@ class PaywallScreen extends StatelessWidget {
   }
 
   Widget _buildActions(BuildContext context, PaywallRouteArguments args) {
+    final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+        color: theme.colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
       ),
       child: Row(
         children: [

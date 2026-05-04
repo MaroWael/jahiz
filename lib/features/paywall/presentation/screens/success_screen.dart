@@ -8,13 +8,14 @@ class SuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final routeArgs = ModalRoute.of(context)?.settings.arguments;
     final args = routeArgs is PaywallRouteArguments
         ? routeArgs
         : const PaywallRouteArguments();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FC),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Payment Successful')),
       body: SafeArea(
         child: Padding(
@@ -63,7 +64,7 @@ class SuccessScreen extends StatelessWidget {
                 'Unlocked features',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: const Color(0xFF1F2742),
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 10),
@@ -76,7 +77,7 @@ class SuccessScreen extends StatelessWidget {
                     return Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Row(
@@ -99,8 +100,8 @@ class SuccessScreen extends StatelessWidget {
                           Expanded(
                             child: Text(
                               feature,
-                              style: const TextStyle(
-                                color: Color(0xFF263252),
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurface,
                                 fontWeight: FontWeight.w600,
                                 height: 1.35,
                               ),

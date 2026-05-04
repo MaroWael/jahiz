@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:jahiz/core/constants/app_colors.dart';
 
 class OnboardingItem extends StatelessWidget {
   final IconData icon;
@@ -18,6 +17,8 @@ class OnboardingItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
@@ -57,8 +58,8 @@ class OnboardingItem extends StatelessWidget {
           // Title
           Text(
                 title,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface,
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                   height: 1.2,
@@ -80,8 +81,8 @@ class OnboardingItem extends StatelessWidget {
           // Description
           Text(
                 description,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
+                style: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant,
                   fontSize: 16,
                   height: 1.6,
                 ),

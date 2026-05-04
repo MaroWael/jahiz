@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:jahiz/core/constants/app_colors.dart';
 import 'package:jahiz/features/home/presentation/screens/home_screan.dart';
 import 'package:jahiz/features/profile_onboarding/presentation/controllers/profile_onboarding_controller.dart';
 
@@ -221,6 +220,8 @@ class _ProfileOnboardingScreenState extends State<ProfileOnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile Onboarding'),
@@ -240,8 +241,8 @@ class _ProfileOnboardingScreenState extends State<ProfileOnboardingScreen> {
                 ElevatedButton(
                   onPressed: _isSaving ? null : details.onStepContinue,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
                   ),
                   child: _isSaving && isLastStep
                       ? const SizedBox(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:jahiz/core/constants/app_colors.dart';
 import 'package:jahiz/features/paywall/models/paywall_route_arguments.dart';
 import 'package:jahiz/features/paywall/presentation/screens/success_screen.dart';
 import 'package:jahiz/features/paywall/services/payment_service.dart';
@@ -299,40 +300,38 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Widget _buildPlanCard(PaywallRouteArguments args) {
+    final theme = Theme.of(context);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFDEE3F2)),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Premium Subscription',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
-              color: Color(0xFF1D2744),
-            ),
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Amount: 50.00 USD',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF354268),
+              color: theme.colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             args.message ??
                 'Pay securely with Stripe to unlock Premium features immediately.',
-            style: const TextStyle(
-              color: Color(0xFF5B6581),
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
               height: 1.35,
               fontWeight: FontWeight.w600,
             ),
@@ -347,18 +346,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return const SizedBox.shrink();
     }
 
+    final brightness = Theme.of(context).brightness;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF3CD),
+        color: AppColors.warningSurface(brightness),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFFE69C)),
+        border: Border.all(
+          color: AppColors.warningText(brightness).withValues(alpha: 0.4),
+        ),
       ),
       child: Text(
         _statusMessage!,
-        style: const TextStyle(
-          color: Color(0xFF6E5600),
+        style: TextStyle(
+          color: AppColors.warningText(brightness),
           fontWeight: FontWeight.w600,
           height: 1.3,
         ),
@@ -368,10 +371,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final args = _resolveArguments(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FC),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Premium Checkout')),
       body: SafeArea(
         child: _isCheckingStatus
@@ -392,13 +396,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE8F6EE),
+                          color: AppColors.successSurface(theme.brightness),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Your account is already Premium.',
                           style: TextStyle(
-                            color: Color(0xFF1D6B44),
+                            color: AppColors.successText(theme.brightness),
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -407,7 +411,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     Text(
                       'Need help? If your card was charged but Premium was not activated, tap Restore Purchase.',
                       style: TextStyle(
-                        color: Colors.grey.shade700,
+                        color: theme.colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                         height: 1.35,
                       ),
@@ -455,8 +459,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       : Icon(
                           Icons.refresh_rounded,
                           color: _hasPendingRestore
-                              ? const Color(0xFF2D4FD7)
-                              : Colors.grey.shade700,
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant,
                         ),
                   label: Text(
                     _isRestoring

@@ -79,8 +79,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       create: (_) => OnboardingCubit(),
       child: Builder(
         builder: (context) {
+          final theme = Theme.of(context);
+
           return Scaffold(
-            backgroundColor: AppColors.background,
+            backgroundColor: theme.scaffoldBackgroundColor,
             body: BlocListener<OnboardingCubit, int>(
               listener: (context, page) {
                 _controller.animateToPage(
@@ -108,10 +110,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   ? const SizedBox.shrink()
                                   : TextButton(
                                       onPressed: () => _navigateToHome(context),
-                                      child: const Text(
+                                      child: Text(
                                         'Skip',
                                         style: TextStyle(
-                                          color: AppColors.textSecondary,
+                                          color: theme
+                                              .colorScheme
+                                              .onSurfaceVariant,
                                           fontSize: 16,
                                         ),
                                       ),
@@ -163,8 +167,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     height: 8,
                                     decoration: BoxDecoration(
                                       color: i == page
-                                          ? AppColors.primary
-                                          : const Color(0xFFD1C4E9),
+                                          ? theme.colorScheme.primary
+                                          : theme.colorScheme.outlineVariant,
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                   ),
@@ -187,8 +191,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     }
                                   },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
-                                    foregroundColor: Colors.white,
+                                    backgroundColor: theme.colorScheme.primary,
+                                    foregroundColor:
+                                        theme.colorScheme.onPrimary,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
                                     ),
