@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jahiz/core/services/notification_service.dart';
 import 'package:jahiz/features/auth/presentation/screens/auth_screen.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_cubit.dart';
 import 'package:jahiz/features/home/presentation/cubit/home_state.dart';
 import 'package:jahiz/features/home/services/local_storage_service.dart';
+import 'package:jahiz/features/notifications/presentation/screens/notification_center_screen.dart';
 
 class HomeScrean extends StatefulWidget {
   const HomeScrean({super.key});
@@ -20,6 +24,9 @@ class _HomeScreanState extends State<HomeScrean> {
   void initState() {
     super.initState();
     _homeCubit.initialize();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_ensureDailyPracticeReminder());
+    });
   }
 
   @override
@@ -33,6 +40,10 @@ class _HomeScreanState extends State<HomeScrean> {
     FocusScope.of(context).unfocus();
     _searchController.clear();
     await _homeCubit.initialize();
+  }
+
+  Future<void> _ensureDailyPracticeReminder() async {
+    await NotificationService.instance.ensureDailyPracticeReminder();
   }
 
   Future<void> _openPractice() async {
@@ -57,6 +68,15 @@ class _HomeScreanState extends State<HomeScrean> {
 
   Future<void> _openProfile() async {
     await Navigator.pushNamed(context, '/profile');
+    if (!mounted) {
+      return;
+    }
+
+    await _homeCubit.initialize();
+  }
+
+  Future<void> _openNotifications() async {
+    await Navigator.pushNamed(context, NotificationCenterScreen.routeName);
     if (!mounted) {
       return;
     }
@@ -91,7 +111,7 @@ class _HomeScreanState extends State<HomeScrean> {
           clipBehavior: Clip.none,
           children: [
             IconButton(
-              onPressed: () {},
+              onPressed: _openNotifications,
               icon: const Icon(Icons.notifications_none_rounded, size: 28),
             ),
             if (state.notificationCount > 0)
