@@ -6,6 +6,7 @@ import 'package:jahiz/features/home/models/home_user.dart';
 import 'package:jahiz/features/home/services/local_storage_service.dart';
 import 'package:jahiz/features/home/services/local_user_service.dart';
 import 'package:jahiz/features/home/services/question_service.dart';
+import 'package:jahiz/features/paywall/models/paywall_route_arguments.dart';
 import 'package:jahiz/features/practice/models/practice_evaluation.dart';
 import 'package:jahiz/features/practice/services/practice_session_submission_service.dart';
 import 'package:jahiz/features/practice/presentation/cubit/practice_state.dart';
@@ -109,12 +110,16 @@ class PracticeCubit extends Cubit<PracticeState> {
         }
       }
 
+      final questionCount = _isDailyQuestionMode
+          ? 1
+          : _resolveQuestionsPerSession(user);
+
       final questions = await _questionService
           .getPracticeQuestions(
             role: activeRole,
             level: user.level,
             techStack: user.techStack,
-            count: _isDailyQuestionMode ? 1 : 5,
+            count: questionCount,
           )
           .timeout(const Duration(seconds: 12));
 
@@ -461,8 +466,30 @@ class PracticeCubit extends Cubit<PracticeState> {
     await _localStorageService.clearPracticeProgress();
   }
 
-  Future<PremiumAccessDecision> _canAccessPracticeSession(HomeUser user) async {
+  PremiumPlan? _resolvePremiumPlan(HomeUser user) {
+    if (!user.isPremium) {
+      return null;
+    }
+
+    return premiumPlanById(user.premiumPlanId);
+  }
+
+  int _resolveQuestionsPerSession(HomeUser user) {
+    final plan = _resolvePremiumPlan(user);
+    return plan?.questionsPerSession ?? 5;
+  }
+
+  int? _resolveDailyPracticeLimit(HomeUser user) {
     if (user.isPremium) {
+      return _resolvePremiumPlan(user)?.dailyPracticeLimit;
+    }
+
+    return freeDailyPracticeSessionLimit;
+  }
+
+  Future<PremiumAccessDecision> _canAccessPracticeSession(HomeUser user) async {
+    final dailyLimit = _resolveDailyPracticeLimit(user);
+    if (dailyLimit == null) {
       return const PremiumAccessDecision.allowed();
     }
 
@@ -475,10 +502,18 @@ class PracticeCubit extends Cubit<PracticeState> {
 
     final usageCount = await _localStorageService
         .getDailyPracticeSessionUsageCount(uid: uid);
-    if (usageCount >= freeDailyPracticeSessionLimit) {
+    if (usageCount >= dailyLimit) {
+      if (user.isPremium) {
+        final planName = _resolvePremiumPlan(user)?.name ?? 'Premium';
+        return PremiumAccessDecision.deniedWithPaywall(
+          message:
+              'You reached your $dailyLimit practice sessions for today on the $planName plan. Upgrade to a higher plan for more sessions.',
+        );
+      }
+
       return PremiumAccessDecision.deniedWithPaywall(
         message:
-            'You reached your free practice limit for today ($freeDailyPracticeSessionLimit sessions). Upgrade to Premium for unlimited practice.',
+            'You reached your free practice limit for today ($dailyLimit sessions). Upgrade to Premium for more sessions.',
       );
     }
 
@@ -486,7 +521,8 @@ class PracticeCubit extends Cubit<PracticeState> {
   }
 
   Future<void> _recordPracticeSessionUsage(HomeUser user) async {
-    if (user.isPremium) {
+    final dailyLimit = _resolveDailyPracticeLimit(user);
+    if (dailyLimit == null) {
       return;
     }
 

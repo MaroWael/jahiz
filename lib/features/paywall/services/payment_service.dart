@@ -70,10 +70,13 @@ class PaymentService {
 
   static const String _pendingPremiumUnlockKey =
       'pending_premium_unlock_after_stripe';
+  static const String _pendingPremiumPlanIdKey =
+      'pending_premium_unlock_plan_id';
 
   Future<PaymentResult> processPremiumPayment({
     required int amount,
     required String currency,
+    String? planId,
     String merchantDisplayName = 'Jahiz Premium',
   }) async {
     if (amount <= 0) {
@@ -141,7 +144,7 @@ class PaymentService {
       await Stripe.instance.presentPaymentSheet();
 
       // Persist a local reconciliation marker before Firestore sync.
-      await markPendingPremiumUnlock();
+      await markPendingPremiumUnlock(planId: planId);
 
       return PaymentResult.success(clientSecret: clientSecret);
     } on StripeException catch (error) {
@@ -238,18 +241,32 @@ class PaymentService {
     return clientSecret;
   }
 
-  Future<void> markPendingPremiumUnlock() async {
+  Future<void> markPendingPremiumUnlock({String? planId}) async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setBool(_pendingPremiumUnlockKey, true);
+
+    final normalizedPlanId = planId?.trim() ?? '';
+    if (normalizedPlanId.isNotEmpty) {
+      await preferences.setString(_pendingPremiumPlanIdKey, normalizedPlanId);
+    } else {
+      await preferences.remove(_pendingPremiumPlanIdKey);
+    }
   }
 
   Future<void> clearPendingPremiumUnlock() async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_pendingPremiumUnlockKey);
+    await preferences.remove(_pendingPremiumPlanIdKey);
   }
 
   Future<bool> hasPendingPremiumUnlock() async {
     final preferences = await SharedPreferences.getInstance();
     return preferences.getBool(_pendingPremiumUnlockKey) ?? false;
+  }
+
+  Future<String?> getPendingPremiumPlanId() async {
+    final preferences = await SharedPreferences.getInstance();
+    final raw = preferences.getString(_pendingPremiumPlanIdKey) ?? '';
+    return raw.trim().isEmpty ? null : raw.trim();
   }
 }

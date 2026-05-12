@@ -92,6 +92,8 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: mode,
+          themeAnimationDuration: const Duration(milliseconds: 120),
+          themeAnimationCurve: Curves.linear,
           routes: {
             '/practice': (_) => const PracticeScreen(),
             '/answer': (_) => const PracticeScreen(isDailyQuestionMode: true),

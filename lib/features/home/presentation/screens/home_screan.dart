@@ -224,6 +224,27 @@ class _HomeScreanState extends State<HomeScrean> {
     }
 
     if (user.isPremium) {
+      final planName = state.premiumPlanName ?? 'Premium';
+      final limit = state.practiceSessionsLimit;
+      if (limit == null) {
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.successSurface(brightness),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Text(
+            '$planName plan: unlimited practice sessions today.',
+            style: TextStyle(
+              color: AppColors.successText(brightness),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        );
+      }
+
+      final remaining = state.practiceSessionsLeft ?? 0;
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -232,7 +253,7 @@ class _HomeScreanState extends State<HomeScrean> {
           borderRadius: BorderRadius.circular(14),
         ),
         child: Text(
-          'Premium account: unlimited practice sessions today.',
+          '$planName plan: $remaining/$limit practice sessions left today.',
           style: TextStyle(
             color: AppColors.successText(brightness),
             fontWeight: FontWeight.w600,
@@ -241,7 +262,10 @@ class _HomeScreanState extends State<HomeScrean> {
       );
     }
 
-    final remaining = state.freePracticeSessionsLeft ?? 0;
+    final remaining = state.practiceSessionsLeft ?? 0;
+    final limit =
+        state.practiceSessionsLimit ??
+        LocalStorageService.freeDailyPracticeSessionLimit;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -250,7 +274,7 @@ class _HomeScreanState extends State<HomeScrean> {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Text(
-        'Free practice sessions left today: $remaining/${LocalStorageService.freeDailyPracticeSessionLimit}',
+        'Free practice sessions left today: $remaining/$limit',
         style: TextStyle(
           color: AppColors.warningText(brightness),
           fontWeight: FontWeight.w600,

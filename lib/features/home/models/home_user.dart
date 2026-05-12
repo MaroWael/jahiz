@@ -5,6 +5,7 @@ class HomeUser {
     required this.level,
     required this.techStack,
     this.isPremium = false,
+    this.premiumPlanId,
   });
 
   final String name;
@@ -12,4 +13,5 @@ class HomeUser {
   final String level;
   final List<String> techStack;
   final bool isPremium;
+  final String? premiumPlanId;
 }

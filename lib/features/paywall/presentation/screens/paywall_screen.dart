@@ -2,10 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:jahiz/features/paywall/models/paywall_route_arguments.dart';
 import 'package:jahiz/features/paywall/presentation/screens/payment_screen.dart';
 
-class PaywallScreen extends StatelessWidget {
+class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
 
   static const String routeName = '/paywall';
+
+  @override
+  State<PaywallScreen> createState() => _PaywallScreenState();
+}
+
+class _PaywallScreenState extends State<PaywallScreen> {
+  late PremiumPlan _selectedPlan;
+  bool _didResolveInitialPlan = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPlan = defaultPremiumPlan();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didResolveInitialPlan) {
+      return;
+    }
+
+    final routeArgs = ModalRoute.of(context)?.settings.arguments;
+    final args = routeArgs is PaywallRouteArguments
+        ? routeArgs
+        : const PaywallRouteArguments();
+
+    if (args.initialPlanId != null) {
+      _selectedPlan = premiumPlanById(args.initialPlanId);
+    }
+
+    _didResolveInitialPlan = true;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +61,9 @@ class PaywallScreen extends StatelessWidget {
           ]
         : args.featureHighlights;
 
+    final plans = kPremiumPlans;
+    final selectedPlan = _selectedPlan;
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
@@ -41,7 +77,25 @@ class PaywallScreen extends StatelessWidget {
                   children: [
                     _buildHero(args: args, message: message),
                     const SizedBox(height: 18),
-                    _buildPlanCard(context),
+                    Text(
+                      'Choose your plan',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ...plans.map(
+                      (plan) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildPlanCard(
+                          context,
+                          plan,
+                          isSelected: plan.id == selectedPlan.id,
+                          onTap: () => setState(() => _selectedPlan = plan),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 18),
                     Text(
                       'What you unlock',
@@ -136,58 +190,142 @@ class PaywallScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPlanCard(BuildContext context) {
+  Widget _buildPlanCard(
+    BuildContext context,
+    PremiumPlan plan, {
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
     final theme = Theme.of(context);
+    final borderColor = isSelected
+        ? theme.colorScheme.primary
+        : theme.colorScheme.outlineVariant;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF4D8),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.bolt_rounded, color: Color(0xFFCE8A00)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                const Text(
-                  'Premium Plan',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.workspace_premium_rounded,
+                    color: Color(0xFF2D4FD7),
+                  ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            plan.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                          if (plan.isPopular) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.secondaryContainer,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                'Most popular',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: theme.colorScheme.onSecondaryContainer,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        plan.description,
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          height: 1.25,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 Text(
-                  'Best for interview-focused weekly practice',
+                  '\$${plan.priceUsd}/mo',
                   style: TextStyle(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    height: 1.25,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
               ],
             ),
-          ),
-          Text(
-            '49.99\$/mo',
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 18,
-              color: theme.colorScheme.onSurface,
+            const SizedBox(height: 12),
+            ...plan.features.map(
+              (feature) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _buildPlanFeatureRow(context, feature),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildPlanFeatureRow(BuildContext context, String text) {
+    final theme = Theme.of(context);
+
+    return Row(
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: const Icon(
+            Icons.check_rounded,
+            size: 16,
+            color: Color(0xFF2D4FD7),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
     );
   }
 
@@ -235,6 +373,7 @@ class PaywallScreen extends StatelessWidget {
 
   Widget _buildActions(BuildContext context, PaywallRouteArguments args) {
     final theme = Theme.of(context);
+    final selectedPlan = _selectedPlan;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -256,9 +395,13 @@ class PaywallScreen extends StatelessWidget {
           Expanded(
             child: FilledButton.icon(
               onPressed: () async {
-                final result = await Navigator.of(
-                  context,
-                ).pushNamed(PaymentScreen.routeName, arguments: args);
+                final result = await Navigator.of(context).pushNamed(
+                  PaymentScreen.routeName,
+                  arguments: PaywallCheckoutArguments(
+                    paywallArgs: args,
+                    plan: selectedPlan,
+                  ),
+                );
 
                 if (!context.mounted) {
                   return;
@@ -269,7 +412,7 @@ class PaywallScreen extends StatelessWidget {
                 }
               },
               icon: const Icon(Icons.rocket_launch_rounded),
-              label: const Text('Upgrade now'),
+              label: Text('Upgrade for \$${selectedPlan.priceUsd}/mo'),
             ),
           ),
         ],

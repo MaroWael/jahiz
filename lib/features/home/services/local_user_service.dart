@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:jahiz/core/services/user_profile_service.dart';
 import 'package:jahiz/features/home/models/home_user.dart';
+import 'package:jahiz/features/paywall/models/paywall_route_arguments.dart';
 
 class LocalUserService {
   LocalUserService({FirebaseAuth? auth, UserProfileService? userProfileService})
@@ -40,6 +41,10 @@ class LocalUserService {
         .trim();
     final level = (careerTarget['level'] as String? ?? 'Junior').trim();
     final isPremium = data['isPremium'] == true;
+    final rawPlanId = (data['premiumPlanId'] as String?)?.trim();
+    final resolvedPlanId = (rawPlanId != null && rawPlanId.isNotEmpty)
+        ? rawPlanId
+        : (isPremium ? defaultPremiumPlan().id : null);
 
     return HomeUser(
       name: resolvedName,
@@ -47,6 +52,7 @@ class LocalUserService {
       level: level.isEmpty ? 'Junior' : level,
       techStack: techStack,
       isPremium: isPremium,
+      premiumPlanId: resolvedPlanId,
     );
   }
 }

@@ -142,6 +142,7 @@ class UserProfileService {
       transaction.set(ref, {
         'isPremium': false,
         'premiumCancelledAt': FieldValue.serverTimestamp(),
+        'premiumPlanId': FieldValue.delete(),
         'stripeSubscriptionStatus': 'canceled',
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));

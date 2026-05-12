@@ -12,6 +12,7 @@ class ProfileManagementData {
     required this.level,
     required this.techStack,
     required this.isPremium,
+    required this.premiumPlanId,
   });
 
   final String name;
@@ -20,6 +21,7 @@ class ProfileManagementData {
   final String level;
   final List<String> techStack;
   final bool isPremium;
+  final String? premiumPlanId;
 }
 
 class ProfileManagementController {
@@ -72,6 +74,7 @@ class ProfileManagementController {
         .toSet()
         .toList();
     final isPremium = data['isPremium'] == true;
+    final premiumPlanId = (data['premiumPlanId'] as String?)?.trim();
 
     return ProfileManagementData(
       name: resolvedName,
@@ -80,6 +83,7 @@ class ProfileManagementController {
       level: level,
       techStack: techStack,
       isPremium: isPremium,
+      premiumPlanId: premiumPlanId,
     );
   }
 

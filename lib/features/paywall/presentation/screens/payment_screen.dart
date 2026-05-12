@@ -16,7 +16,6 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  static const int _subscriptionAmount = 5000;
   static const String _subscriptionCurrency = 'usd';
 
   final PaymentService _paymentService = PaymentService();
@@ -29,6 +28,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   bool _isPremium = false;
   bool _hasPendingRestore = false;
   String? _statusMessage;
+  String? _currentPlanId;
 
   @override
   void initState() {
@@ -36,30 +36,45 @@ class _PaymentScreenState extends State<PaymentScreen> {
     _loadInitialStatus();
   }
 
-  PaywallRouteArguments _resolveArguments(BuildContext context) {
+  PaywallCheckoutArguments _resolveCheckoutArguments(BuildContext context) {
     final routeArgs = ModalRoute.of(context)?.settings.arguments;
-    if (routeArgs is PaywallRouteArguments) {
+    if (routeArgs is PaywallCheckoutArguments) {
       return routeArgs;
     }
+    if (routeArgs is PaywallRouteArguments) {
+      return PaywallCheckoutArguments(
+        paywallArgs: routeArgs,
+        plan: defaultPremiumPlan(),
+      );
+    }
 
-    return const PaywallRouteArguments();
+    return PaywallCheckoutArguments(
+      paywallArgs: const PaywallRouteArguments(),
+      plan: defaultPremiumPlan(),
+    );
   }
 
   Future<void> _loadInitialStatus() async {
     try {
-      final status = await Future.wait<bool>([
+      final results = await Future.wait<Object?>([
         _premiumFirebaseService.isCurrentUserPremium(),
         _paymentService.hasPendingPremiumUnlock(),
+        _premiumFirebaseService.getCurrentUserPlanId(),
       ]);
 
       if (!mounted) {
         return;
       }
 
+      final isPremium = results[0] as bool? ?? false;
+      final hasPendingRestore = results[1] as bool? ?? false;
+      final currentPlanId = results[2] as String?;
+
       setState(() {
         _isCheckingStatus = false;
-        _isPremium = status[0];
-        _hasPendingRestore = status[1];
+        _isPremium = isPremium;
+        _hasPendingRestore = hasPendingRestore;
+        _currentPlanId = currentPlanId;
       });
     } catch (_) {
       if (!mounted) {
@@ -98,10 +113,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  Future<void> _handlePayNow(PaywallRouteArguments args) async {
+  Future<void> _handlePayNow(PaywallCheckoutArguments checkoutArgs) async {
     if (_isPaying || _isRestoring || _isCheckingStatus) {
       return;
     }
+
+    final args = checkoutArgs.paywallArgs;
+    final plan = checkoutArgs.plan;
 
     setState(() {
       _isPaying = true;
@@ -111,7 +129,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
     try {
       final alreadyPremium = await _premiumFirebaseService
           .isCurrentUserPremium();
-      if (alreadyPremium) {
+      final currentPlanId = await _premiumFirebaseService
+          .getCurrentUserPlanId();
+      final isUpgrade = _isUpgradePlan(plan, currentPlanId);
+
+      if (alreadyPremium && !isUpgrade) {
         if (!mounted) {
           return;
         }
@@ -120,15 +142,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
           _isPaying = false;
           _isPremium = true;
           _hasPendingRestore = false;
+          _currentPlanId = currentPlanId;
         });
 
-        _showSnackBar('You already have Premium access.');
+        _showSnackBar('You already have this plan or higher.');
         return;
       }
 
       final result = await _paymentService.processPremiumPayment(
-        amount: _subscriptionAmount,
+        amount: plan.priceCents,
         currency: _subscriptionCurrency,
+        planId: plan.id,
       );
 
       if (!mounted) {
@@ -145,7 +169,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
 
       try {
-        await _premiumFirebaseService.markCurrentUserPremium();
+        await _premiumFirebaseService.markCurrentUserPremium(planId: plan.id);
         await _paymentService.clearPendingPremiumUnlock();
 
         if (!mounted) {
@@ -156,6 +180,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           _isPaying = false;
           _isPremium = true;
           _hasPendingRestore = false;
+          _currentPlanId = plan.id;
         });
 
         await _openSuccessScreen(args);
@@ -222,10 +247,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  Future<void> _handleRestorePurchase(PaywallRouteArguments args) async {
+  Future<void> _handleRestorePurchase(
+    PaywallCheckoutArguments checkoutArgs,
+  ) async {
     if (_isPaying || _isRestoring) {
       return;
     }
+
+    final args = checkoutArgs.paywallArgs;
 
     setState(() {
       _isRestoring = true;
@@ -269,7 +298,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      await _premiumFirebaseService.markCurrentUserPremium();
+      final pendingPlanId = await _paymentService.getPendingPremiumPlanId();
+      final planIdToStore = (pendingPlanId == null || pendingPlanId.isEmpty)
+          ? checkoutArgs.plan.id
+          : pendingPlanId;
+
+      await _premiumFirebaseService.markCurrentUserPremium(
+        planId: planIdToStore,
+      );
       await _paymentService.clearPendingPremiumUnlock();
 
       if (!mounted) {
@@ -299,8 +335,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  Widget _buildPlanCard(PaywallRouteArguments args) {
+  Widget _buildPlanCard(PaywallCheckoutArguments checkoutArgs) {
     final theme = Theme.of(context);
+    final plan = checkoutArgs.plan;
+    final args = checkoutArgs.paywallArgs;
 
     return Container(
       width: double.infinity,
@@ -313,17 +351,63 @@ class _PaymentScreenState extends State<PaymentScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Premium Subscription',
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${plan.name} Plan',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+              Text(
+                '\$${plan.priceUsd}.00 USD',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
-            'Amount: 50.00 USD',
+            plan.description,
             style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: theme.colorScheme.onSurface,
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...plan.features.map(
+            (feature) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      size: 16,
+                      color: Color(0xFF2D4FD7),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      feature,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -369,10 +453,30 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
+  int _planIndex(String? planId) {
+    final resolved = premiumPlanById(planId);
+    final index = kPremiumPlans.indexWhere((plan) => plan.id == resolved.id);
+    return index == -1 ? 0 : index;
+  }
+
+  bool _isUpgradePlan(PremiumPlan selectedPlan, String? currentPlanId) {
+    if (!_isPremium) {
+      return true;
+    }
+
+    final currentIndex = _planIndex(currentPlanId);
+    final selectedIndex = _planIndex(selectedPlan.id);
+    return selectedIndex > currentIndex;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final args = _resolveArguments(context);
+    final checkoutArgs = _resolveCheckoutArguments(context);
+    final plan = checkoutArgs.plan;
+    final currentPlan = _isPremium ? premiumPlanById(_currentPlanId) : null;
+    final canUpgrade = _isUpgradePlan(plan, _currentPlanId);
+    final isUpgradeBlocked = _isPremium && !canUpgrade;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -385,8 +489,36 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildPlanCard(args),
+                    _buildPlanCard(checkoutArgs),
                     const SizedBox(height: 14),
+                    if (_isPremium) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceVariant,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Current plan: ${currentPlan?.name ?? 'Premium'}',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (isUpgradeBlocked) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          'Select a higher plan to upgrade your limits.',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                    ],
                     if (_statusMessage != null) ...[
                       _buildStatusBanner(),
                       const SizedBox(height: 14),
@@ -430,9 +562,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: (_isPaying || _isRestoring || _isPremium)
+                  onPressed: (_isPaying || _isRestoring || isUpgradeBlocked)
                       ? null
-                      : () => _handlePayNow(args),
+                      : () => _handlePayNow(checkoutArgs),
                   icon: _isPaying
                       ? const SizedBox(
                           width: 16,
@@ -440,7 +572,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.lock_open_rounded),
-                  label: Text(_isPaying ? 'Processing...' : 'Pay 50.00 USD'),
+                  label: Text(
+                    _isPaying
+                        ? 'Processing...'
+                        : (_isPremium
+                              ? 'Upgrade for \$${plan.priceUsd}.00 USD'
+                              : 'Pay \$${plan.priceUsd}.00 USD'),
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -449,7 +587,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 child: OutlinedButton.icon(
                   onPressed: _isPaying || _isRestoring
                       ? null
-                      : () => _handleRestorePurchase(args),
+                      : () => _handleRestorePurchase(checkoutArgs),
                   icon: _isRestoring
                       ? const SizedBox(
                           width: 16,

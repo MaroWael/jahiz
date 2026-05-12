@@ -9,6 +9,7 @@ import 'package:jahiz/features/home/services/local_storage_service.dart';
 import 'package:jahiz/features/home/services/local_user_service.dart';
 import 'package:jahiz/features/home/services/question_service.dart';
 import 'package:jahiz/features/home/services/session_summary_service.dart';
+import 'package:jahiz/features/paywall/models/paywall_route_arguments.dart';
 
 class HomeCubit extends Cubit<HomeState> {
   HomeCubit({
@@ -84,8 +85,14 @@ class HomeCubit extends Cubit<HomeState> {
         level: user.level,
         techStack: user.techStack,
       );
-      final freePracticeSessionsLeft = await _resolveFreePracticeSessionsLeft(
+      final premiumPlan = _resolvePremiumPlan(user);
+      final practiceSessionsLimit = _resolvePracticeSessionsLimit(
         user,
+        premiumPlan,
+      );
+      final practiceSessionsLeft = await _resolvePracticeSessionsLeft(
+        user,
+        practiceSessionsLimit,
       );
       final notificationCount = await _notificationInboxService
           .getUnreadCount();
@@ -108,7 +115,9 @@ class HomeCubit extends Cubit<HomeState> {
           dailyQuestion: question,
           notificationCount: notificationCount,
           sessionSummary: sessionSummary,
-          freePracticeSessionsLeft: freePracticeSessionsLeft,
+          practiceSessionsLeft: practiceSessionsLeft,
+          practiceSessionsLimit: practiceSessionsLimit,
+          premiumPlanName: premiumPlan?.name,
           popularRoles: popularRoles,
           allRoles: allRoles,
         ),
@@ -186,8 +195,27 @@ class HomeCubit extends Cubit<HomeState> {
     }
   }
 
-  Future<int?> _resolveFreePracticeSessionsLeft(HomeUser user) async {
+  PremiumPlan? _resolvePremiumPlan(HomeUser user) {
+    if (!user.isPremium) {
+      return null;
+    }
+
+    return premiumPlanById(user.premiumPlanId);
+  }
+
+  int? _resolvePracticeSessionsLimit(HomeUser user, PremiumPlan? plan) {
     if (user.isPremium) {
+      return plan?.dailyPracticeLimit;
+    }
+
+    return LocalStorageService.freeDailyPracticeSessionLimit;
+  }
+
+  Future<int?> _resolvePracticeSessionsLeft(
+    HomeUser user,
+    int? dailyLimit,
+  ) async {
+    if (dailyLimit == null) {
       return null;
     }
 
@@ -198,8 +226,7 @@ class HomeCubit extends Cubit<HomeState> {
 
     final usedSessions = await _localStorageService
         .getDailyPracticeSessionUsageCount(uid: uid);
-    final remaining =
-        LocalStorageService.freeDailyPracticeSessionLimit - usedSessions;
+    final remaining = dailyLimit - usedSessions;
     return remaining < 0 ? 0 : remaining;
   }
 }

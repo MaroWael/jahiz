@@ -31,6 +31,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
   String _name = 'User';
   String _email = '';
   bool _isPremium = false;
+  String? _premiumPlanId;
 
   String _savedRole = '';
   String _savedLevel = '';
@@ -113,6 +114,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
         _name = profile.name;
         _email = profile.email;
         _isPremium = profile.isPremium;
+        _premiumPlanId = profile.premiumPlanId;
 
         _savedRole = profile.role;
         _savedLevel = _normalizeLevel(profile.level);
@@ -767,6 +769,14 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
 
   Widget _buildSubscriptionSection() {
     final theme = Theme.of(context);
+    final currentPlan = _resolveCurrentPlan();
+    final nextPlan = _resolveUpgradePlan(currentPlan);
+    final currentPlanLabel = currentPlan == null
+        ? 'Premium'
+        : '${currentPlan.name} • \$${currentPlan.priceUsd}/mo';
+    final currentPlanDescription = currentPlan == null
+        ? 'Premium plan active'
+        : currentPlan.description;
 
     return _buildSoftCard(
       child: Column(
@@ -797,7 +807,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _isPremium ? 'Status: Active' : 'Status: Inactive',
+                      'Status: Active',
                       style: TextStyle(
                         color: theme.colorScheme.onSurfaceVariant,
                         fontSize: 12,
@@ -810,6 +820,22 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
           ),
           const SizedBox(height: 12),
           Text(
+            'Current plan: $currentPlanLabel',
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            currentPlanDescription,
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
             'Canceling ends Premium immediately and locks premium-only '
             'features. You can upgrade again anytime.',
             style: TextStyle(
@@ -817,6 +843,43 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
               height: 1.35,
             ),
           ),
+          if (nextPlan != null) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () {
+                  final limitLabel = nextPlan.hasUnlimitedPractice
+                      ? 'unlimited practice sessions'
+                      : 'up to ${nextPlan.dailyPracticeLimit} sessions per day';
+
+                  Navigator.pushNamed(
+                    context,
+                    PaywallScreen.routeName,
+                    arguments: PaywallRouteArguments(
+                      title: 'Upgrade Plan',
+                      featureName: '${nextPlan.name} plan',
+                      message:
+                          'Upgrade to ${nextPlan.name} for ${nextPlan.questionsPerSession} questions per session and $limitLabel.',
+                      featureHighlights: nextPlan.features,
+                      initialPlanId: nextPlan.id,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.trending_up_rounded),
+                label: Text('Upgrade to ${nextPlan.name}'),
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 12),
+            Text(
+              'You are already on the highest plan.',
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
@@ -845,6 +908,27 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
         ],
       ),
     );
+  }
+
+  PremiumPlan? _resolveCurrentPlan() {
+    if (!_isPremium) {
+      return null;
+    }
+
+    return premiumPlanById(_premiumPlanId);
+  }
+
+  PremiumPlan? _resolveUpgradePlan(PremiumPlan? currentPlan) {
+    if (currentPlan == null) {
+      return null;
+    }
+
+    final index = kPremiumPlans.indexWhere((plan) => plan.id == currentPlan.id);
+    if (index == -1 || index >= kPremiumPlans.length - 1) {
+      return null;
+    }
+
+    return kPremiumPlans[index + 1];
   }
 
   Widget _buildSubscriptionUpsellSection() {
