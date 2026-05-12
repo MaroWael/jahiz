@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:jahiz/core/constants/app_colors.dart';
 import 'package:jahiz/core/services/theme_controller.dart';
 import 'package:jahiz/features/home/models/practice_session_record.dart';
+import 'package:jahiz/features/paywall/models/paywall_route_arguments.dart';
+import 'package:jahiz/features/paywall/presentation/screens/paywall_screen.dart';
 import 'package:jahiz/features/paywall/services/payment_service.dart';
 import 'package:jahiz/features/profile_management/presentation/controllers/profile_management_controller.dart';
 
@@ -845,6 +847,118 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
     );
   }
 
+  Widget _buildSubscriptionUpsellSection() {
+    final theme = Theme.of(context);
+
+    const perks = <String>[
+      'Unlimited practice sessions',
+      'Detailed AI feedback and model answers',
+      'Advanced reports with weak areas',
+    ];
+
+    return _buildSoftCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF4FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.workspace_premium_rounded,
+                  color: Color(0xFF2D4FD7),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Premium subscription',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Status: Inactive',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Unlock Premium to practice without limits and see deeper insights.',
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...perks.map(
+            (perk) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      size: 16,
+                      color: Color(0xFF2D4FD7),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      perk,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () {
+                Navigator.pushNamed(
+                  context,
+                  PaywallScreen.routeName,
+                  arguments: const PaywallRouteArguments(
+                    title: 'Upgrade to Premium',
+                    featureName: 'Premium features',
+                    message:
+                        'Upgrade to unlock unlimited practice sessions, AI feedback, and advanced reports.',
+                  ),
+                );
+              },
+              icon: const Icon(Icons.rocket_launch_rounded),
+              label: const Text('Upgrade to Premium'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatsGrid() {
     return Row(
       children: [
@@ -1423,6 +1537,9 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                     if (_isPremium) ...[
                       const SizedBox(height: 16),
                       _buildSubscriptionSection(),
+                    ] else ...[
+                      const SizedBox(height: 16),
+                      _buildSubscriptionUpsellSection(),
                     ],
                     if (_isEditing) ...[
                       const SizedBox(height: 16),
