@@ -810,45 +810,47 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
             child: Text(_isEditing ? 'Close Edit Mode' : 'Edit Profile'),
           ),
         ),
-        const SizedBox(height: 10),
-        _buildSoftCard(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDCE9FF),
-                  borderRadius: BorderRadius.circular(10),
+        if (!_isEditing) ...[
+          const SizedBox(height: 10),
+          _buildSoftCard(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCE9FF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.work_outline_rounded,
+                    color: Color(0xFF2A5FD9),
+                  ),
                 ),
-                child: const Icon(
-                  Icons.work_outline_rounded,
-                  color: Color(0xFF2A5FD9),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Target Job Role',
-                      style: TextStyle(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontSize: 12,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Target Job Role',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                    Text(
-                      _savedRole.isEmpty ? 'Not set yet' : _savedRole,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ],
+                      Text(
+                        _savedRole.isEmpty ? 'Not set yet' : _savedRole,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -1699,29 +1701,32 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                   children: [
                     _buildHeader(),
                     const SizedBox(height: 18),
-                    _buildProfileSection(),
-                    const SizedBox(height: 16),
-                    _buildPrimaryActions(),
-                    const SizedBox(height: 16),
-                    _buildAppearanceSection(),
-                    if (_isPremium) ...[
-                      const SizedBox(height: 16),
-                      _buildSubscriptionSection(),
-                    ] else ...[
-                      const SizedBox(height: 16),
-                      _buildSubscriptionUpsellSection(),
-                    ],
                     if (_isEditing) ...[
+                      _buildPrimaryActions(),
                       const SizedBox(height: 16),
                       _buildEditFormCard(),
+                      const SizedBox(height: 14),
+                    ] else ...[
+                      _buildProfileSection(),
+                      const SizedBox(height: 16),
+                      _buildPrimaryActions(),
+                      const SizedBox(height: 16),
+                      _buildAppearanceSection(),
+                      if (_isPremium) ...[
+                        const SizedBox(height: 16),
+                        _buildSubscriptionSection(),
+                      ] else ...[
+                        const SizedBox(height: 16),
+                        _buildSubscriptionUpsellSection(),
+                      ],
+                      const SizedBox(height: 16),
+                      _buildStatsGrid(),
+                      const SizedBox(height: 16),
+                      _buildActivityCard(),
+                      const SizedBox(height: 16),
+                      _buildAchievementsSection(),
+                      const SizedBox(height: 14),
                     ],
-                    const SizedBox(height: 16),
-                    _buildStatsGrid(),
-                    const SizedBox(height: 16),
-                    _buildActivityCard(),
-                    const SizedBox(height: 16),
-                    _buildAchievementsSection(),
-                    const SizedBox(height: 14),
                   ],
                 ),
               ),

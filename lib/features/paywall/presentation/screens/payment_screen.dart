@@ -572,12 +572,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.lock_open_rounded),
-                  label: Text(
-                    _isPaying
-                        ? 'Processing...'
-                        : (_isPremium
-                              ? 'Upgrade for \$${plan.priceUsd}.00 USD'
-                              : 'Pay \$${plan.priceUsd}.00 USD'),
+                  label: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _isPaying
+                          ? 'Processing...'
+                          : (_isPremium
+                                ? 'Upgrade for \$${plan.priceUsd}.00 USD'
+                                : 'Pay \$${plan.priceUsd}.00 USD'),
+                      maxLines: 1,
+                      softWrap: false,
+                    ),
                   ),
                 ),
               ),

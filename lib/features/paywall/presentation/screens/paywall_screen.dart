@@ -412,7 +412,15 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 }
               },
               icon: const Icon(Icons.rocket_launch_rounded),
-              label: Text('Upgrade for \$${selectedPlan.priceUsd}/mo'),
+              label: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Upgrade for \$${selectedPlan.priceUsd}/mo',
+                  maxLines: 1,
+                  softWrap: false,
+                ),
+              ),
             ),
           ),
         ],
