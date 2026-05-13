@@ -49,8 +49,6 @@ class MainApp extends StatefulWidget {
 }
 
 class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
-  bool _wasInBackground = false;
-
   @override
   void initState() {
     super.initState();
@@ -63,23 +61,11 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      if (_wasInBackground) {
-        unawaited(
-          NotificationService.instance.showWelcomeNotificationDelayed(),
-        );
-      }
-      _wasInBackground = false;
       unawaited(_resetFollowUpReminder());
       unawaited(
         NotificationService.instance.refreshDailyPracticeReminderIfAllowed(),
       );
       return;
-    }
-
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
-      _wasInBackground = true;
     }
   }
 

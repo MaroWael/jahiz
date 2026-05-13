@@ -49,6 +49,8 @@ class NotificationService {
       NotificationInboxService();
 
   bool _isInitialized = false;
+  bool _welcomeNotificationInFlight = false;
+  bool _welcomeNotificationShownThisSession = false;
 
   Future<void> initialize({
     required void Function(String? payload) onNotificationTap,
@@ -187,16 +189,31 @@ class NotificationService {
   Future<void> showWelcomeNotificationDelayed({
     Duration delay = const Duration(seconds: 3),
   }) async {
-    await Future<void>.delayed(delay);
+    if (_welcomeNotificationShownThisSession || _welcomeNotificationInFlight) {
+      return;
+    }
 
-    await _notificationsPlugin.cancel(welcomeNotificationId);
+    _welcomeNotificationInFlight = true;
+    try {
+      await Future<void>.delayed(delay);
 
-    await showInstantNotification(
-      id: welcomeNotificationId,
-      title: 'Welcome 👋',
-      body: "Ready to level up your interview skills? Let's start!",
-      payload: '/practice',
-    );
+      if (_welcomeNotificationShownThisSession) {
+        return;
+      }
+
+      await _notificationsPlugin.cancel(welcomeNotificationId);
+
+      await showInstantNotification(
+        id: welcomeNotificationId,
+        title: 'Welcome 👋',
+        body: "Ready to level up your interview skills? Let's start!",
+        payload: '/practice',
+      );
+
+      _welcomeNotificationShownThisSession = true;
+    } finally {
+      _welcomeNotificationInFlight = false;
+    }
   }
 
   Future<void> showResultNotification({
