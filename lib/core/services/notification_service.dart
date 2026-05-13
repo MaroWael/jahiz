@@ -26,8 +26,8 @@ class NotificationService {
   static const int testNotificationId = 9001;
 
   static const TimeOfDay defaultDailyPracticeReminderTime = TimeOfDay(
-    hour: 3,
-    minute: 26,
+    hour: 14,
+    minute: 00,
   );
 
   static const AndroidNotificationChannel _androidChannel =
