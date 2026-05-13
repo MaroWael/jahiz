@@ -460,13 +460,25 @@ class _ProfileOnboardingScreenState extends State<ProfileOnboardingScreen> {
     return Align(
       alignment: Alignment.centerLeft,
       child: SegmentedButton<InterviewLanguage>(
-        segments: const [
+        style: ButtonStyle(
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+          visualDensity: VisualDensity.compact,
+        ),
+        segments: [
           ButtonSegment(
             value: InterviewLanguage.english,
-            label: Text('English'),
+            label: _buildLanguageSegmentLabel('English'),
           ),
-          ButtonSegment(value: InterviewLanguage.arabic, label: Text('Arabic')),
-          ButtonSegment(value: InterviewLanguage.mixed, label: Text('Mixed')),
+          ButtonSegment(
+            value: InterviewLanguage.arabic,
+            label: _buildLanguageSegmentLabel('Arabic'),
+          ),
+          ButtonSegment(
+            value: InterviewLanguage.mixed,
+            label: _buildLanguageSegmentLabel('Mixed'),
+          ),
         ],
         selected: <InterviewLanguage>{selectedInterviewLanguage},
         onSelectionChanged: (selection) {
@@ -474,5 +486,9 @@ class _ProfileOnboardingScreenState extends State<ProfileOnboardingScreen> {
         },
       ),
     );
+  }
+
+  Widget _buildLanguageSegmentLabel(String label) {
+    return FittedBox(fit: BoxFit.scaleDown, child: Text(label));
   }
 }

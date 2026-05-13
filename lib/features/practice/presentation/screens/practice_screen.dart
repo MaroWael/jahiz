@@ -36,6 +36,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
       barrierDismissible: false,
       builder: (context) {
         final theme = Theme.of(context);
+        final scoreChipColor = theme.colorScheme.secondaryContainer;
+        final scoreChipTextColor = theme.colorScheme.onSecondaryContainer;
         return AlertDialog(
           title: const Text('Interview Session Summary'),
           content: SingleChildScrollView(
@@ -94,12 +96,15 @@ class _PracticeScreenState extends State<PracticeScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE8F0FF),
+                            color: scoreChipColor,
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
                             '${scores[index].toStringAsFixed(1)} / 10',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: scoreChipTextColor,
+                            ),
                           ),
                         ),
                       ],

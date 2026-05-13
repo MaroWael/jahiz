@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:jahiz/core/services/theme_controller.dart';
 import 'package:jahiz/features/auth/presentation/controllers/auth_flow_controller.dart';
 import 'package:jahiz/features/auth/presentation/screens/email_verification_screen.dart';
 import 'package:jahiz/features/home/presentation/screens/home_screan.dart';
@@ -16,6 +17,7 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
   final _authFlowController = AuthFlowController();
+  final AppThemeController _themeController = AppThemeController.instance;
 
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -204,6 +206,31 @@ class _AuthScreenState extends State<AuthScreen> {
             fontWeight: FontWeight.w700,
           ),
         ),
+        actions: [
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: _themeController.themeMode,
+            builder: (context, mode, _) {
+              final isDark =
+                  mode == ThemeMode.dark ||
+                  (mode == ThemeMode.system &&
+                      Theme.of(context).brightness == Brightness.dark);
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Tooltip(
+                  message: 'Dark mode',
+                  child: Switch.adaptive(
+                    value: isDark,
+                    onChanged: (value) {
+                      _themeController.setThemeMode(
+                        value ? ThemeMode.dark : ThemeMode.light,
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(

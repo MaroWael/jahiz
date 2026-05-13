@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:jahiz/core/services/theme_controller.dart';
 import 'package:jahiz/features/auth/presentation/controllers/auth_flow_controller.dart';
 import 'package:jahiz/features/auth/presentation/screens/auth_screen.dart';
 import 'package:jahiz/features/home/presentation/screens/home_screan.dart';
@@ -16,6 +17,7 @@ class EmailVerificationScreen extends StatefulWidget {
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   final AuthFlowController _authFlowController = AuthFlowController();
+  final AppThemeController _themeController = AppThemeController.instance;
 
   bool _isLoading = false;
 
@@ -118,6 +120,31 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         backgroundColor: theme.scaffoldBackgroundColor,
         title: const Text('Verify Email'),
         centerTitle: true,
+        actions: [
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: _themeController.themeMode,
+            builder: (context, mode, _) {
+              final isDark =
+                  mode == ThemeMode.dark ||
+                  (mode == ThemeMode.system &&
+                      Theme.of(context).brightness == Brightness.dark);
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Tooltip(
+                  message: 'Dark mode',
+                  child: Switch.adaptive(
+                    value: isDark,
+                    onChanged: (value) {
+                      _themeController.setThemeMode(
+                        value ? ThemeMode.dark : ThemeMode.light,
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Center(
         child: ConstrainedBox(

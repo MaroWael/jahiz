@@ -5,10 +5,14 @@ enum NotificationPermissionState { unknown, granted, denied }
 
 class AppPreferencesService {
   static const String seenOnboardingKey = 'seen_onboarding';
+  static const String welcomeNotificationShownKey =
+      'welcome_notification_shown';
   static const String notificationPermissionStateKey =
       'notification_permission_state';
   static const String dailyPracticeReminderScheduledKey =
       'daily_practice_reminder_scheduled';
+  static const String dailyPracticeReminderTimeKey =
+      'daily_practice_reminder_time';
   static const String lastKnownTimeZoneKey = 'notification_last_timezone';
   static const String themeModeKey = 'theme_mode';
 
@@ -20,6 +24,16 @@ class AppPreferencesService {
   Future<void> setSeenOnboarding(bool seen) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(seenOnboardingKey, seen);
+  }
+
+  Future<bool> hasShownWelcomeNotification() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(welcomeNotificationShownKey) ?? false;
+  }
+
+  Future<void> setWelcomeNotificationShown(bool shown) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(welcomeNotificationShownKey, shown);
   }
 
   Future<NotificationPermissionState> getNotificationPermissionState() async {
@@ -43,6 +57,20 @@ class AppPreferencesService {
   Future<void> setDailyPracticeReminderScheduled(bool scheduled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(dailyPracticeReminderScheduledKey, scheduled);
+  }
+
+  Future<String?> getDailyPracticeReminderTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(dailyPracticeReminderTimeKey);
+  }
+
+  Future<void> setDailyPracticeReminderTime(String? time) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (time == null || time.isEmpty) {
+      await prefs.remove(dailyPracticeReminderTimeKey);
+      return;
+    }
+    await prefs.setString(dailyPracticeReminderTimeKey, time);
   }
 
   Future<String?> getLastKnownTimeZone() async {

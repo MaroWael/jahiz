@@ -10,6 +10,16 @@ import 'package:jahiz/features/paywall/presentation/screens/paywall_screen.dart'
 import 'package:jahiz/features/paywall/services/payment_service.dart';
 import 'package:jahiz/features/profile_management/presentation/controllers/profile_management_controller.dart';
 
+class _PremiumBadgeStyle {
+  const _PremiumBadgeStyle({
+    required this.backgroundColor,
+    required this.textColor,
+  });
+
+  final Color backgroundColor;
+  final Color textColor;
+}
+
 class ProfileManagementScreen extends StatefulWidget {
   const ProfileManagementScreen({super.key});
 
@@ -621,6 +631,11 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
 
   Widget _buildProfileSection() {
     final theme = Theme.of(context);
+    final premiumBadgeLabel = _resolvePremiumBadgeLabel();
+    final premiumBadgeStyle = _resolvePremiumBadgeStyle(
+      brightness: theme.brightness,
+      surfaceColor: theme.colorScheme.surface,
+    );
 
     return SizedBox(
       width: double.infinity,
@@ -668,15 +683,15 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFC940),
+                        color: premiumBadgeStyle.backgroundColor,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       alignment: Alignment.center,
-                      child: const Text(
-                        'Premium',
+                      child: Text(
+                        premiumBadgeLabel,
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF5B4000),
+                          color: premiumBadgeStyle.textColor,
                           fontSize: 12,
                         ),
                       ),
@@ -699,6 +714,77 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  String _resolvePremiumBadgeLabel() {
+    if (!_isPremium) {
+      return '';
+    }
+
+    final planId = _premiumPlanId?.trim();
+    if (planId == null || planId.isEmpty) {
+      return 'Premium';
+    }
+
+    final normalized = planId.toLowerCase();
+    for (final plan in kPremiumPlans) {
+      if (plan.id.toLowerCase() == normalized) {
+        return plan.name;
+      }
+    }
+
+    return 'Premium';
+  }
+
+  _PremiumBadgeStyle _resolvePremiumBadgeStyle({
+    required Brightness brightness,
+    required Color surfaceColor,
+  }) {
+    final baseColor = _resolvePremiumBadgeBaseColor();
+
+    return _buildPremiumBadgeStyle(
+      baseColor: baseColor,
+      brightness: brightness,
+      surfaceColor: surfaceColor,
+    );
+  }
+
+  Color _resolvePremiumBadgeBaseColor() {
+    if (!_isPremium) {
+      return AppColors.primaryLight;
+    }
+
+    final planId = _premiumPlanId?.trim().toLowerCase();
+    switch (planId) {
+      case 'starter':
+        return AppColors.onboarding3;
+      case 'pro':
+        return AppColors.onboarding1;
+      case 'elite':
+        return AppColors.onboarding4;
+      default:
+        return AppColors.primaryLight;
+    }
+  }
+
+  _PremiumBadgeStyle _buildPremiumBadgeStyle({
+    required Color baseColor,
+    required Brightness brightness,
+    required Color surfaceColor,
+  }) {
+    final backgroundOpacity = brightness == Brightness.dark ? 0.32 : 0.16;
+    final backgroundColor = Color.alphaBlend(
+      baseColor.withValues(alpha: backgroundOpacity),
+      surfaceColor,
+    );
+    final textColor = brightness == Brightness.dark
+        ? (Color.lerp(baseColor, Colors.white, 0.35) ?? baseColor)
+        : baseColor;
+
+    return _PremiumBadgeStyle(
+      backgroundColor: backgroundColor,
+      textColor: textColor,
     );
   }
 

@@ -26,17 +26,20 @@ class NotificationService {
   static const int testNotificationId = 9001;
 
   static const TimeOfDay defaultDailyPracticeReminderTime = TimeOfDay(
-    hour: 10,
-    minute: 0,
+    hour: 3,
+    minute: 26,
   );
 
   static const AndroidNotificationChannel _androidChannel =
       AndroidNotificationChannel(
-        'interview_prep_channel',
-        'Interview Prep Notifications',
+        'interview_prep_channel_v2',
+        'Interview Prep Alerts',
         description:
-            'Notifications for reminders, results, and daily challenges.',
-        importance: Importance.high,
+            'Practice reminders, daily challenges, and result updates.',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+        showBadge: true,
       );
 
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
@@ -186,6 +189,8 @@ class NotificationService {
   }) async {
     await Future<void>.delayed(delay);
 
+    await _notificationsPlugin.cancel(welcomeNotificationId);
+
     await showInstantNotification(
       id: welcomeNotificationId,
       title: 'Welcome 👋',
@@ -220,17 +225,13 @@ class NotificationService {
       scheduledFor: scheduledDate.toLocal(),
     );
 
-    await _notificationsPlugin.zonedSchedule(
-      dailyChallengeNotificationId,
-      'Daily Challenge 🔥',
-      question,
-      scheduledDate,
-      _notificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
+    await _scheduleZonedNotification(
+      id: dailyChallengeNotificationId,
+      title: 'Daily Challenge 🔥',
+      body: question,
+      scheduledDate: scheduledDate,
       payload: '/practice',
+      matchDateTimeComponents: DateTimeComponents.time,
     );
   }
 
@@ -253,15 +254,11 @@ class NotificationService {
       scheduledFor: scheduledDate.toLocal(),
     );
 
-    await _notificationsPlugin.zonedSchedule(
-      followUpReminderId,
-      'We miss you 👀',
-      'Come back and continue your interview prep!',
-      scheduledDate,
-      _notificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
+    await _scheduleZonedNotification(
+      id: followUpReminderId,
+      title: 'We miss you 👀',
+      body: 'Come back and continue your interview prep!',
+      scheduledDate: scheduledDate,
       payload: '/practice',
     );
   }
@@ -278,9 +275,50 @@ class NotificationService {
         channelDescription: _androidChannel.description,
         importance: Importance.max,
         priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+        channelShowBadge: true,
+        category: AndroidNotificationCategory.reminder,
       ),
       iOS: const DarwinNotificationDetails(),
     );
+  }
+
+  Future<void> _scheduleZonedNotification({
+    required int id,
+    required String title,
+    required String body,
+    required tz.TZDateTime scheduledDate,
+    String? payload,
+    DateTimeComponents? matchDateTimeComponents,
+  }) async {
+    try {
+      await _notificationsPlugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledDate,
+        _notificationDetails(),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: matchDateTimeComponents,
+        payload: payload,
+      );
+    } catch (_) {
+      await _notificationsPlugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledDate,
+        _notificationDetails(),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: matchDateTimeComponents,
+        payload: payload,
+      );
+    }
   }
 
   tz.TZDateTime _nextInstanceOfTime(TimeOfDay time) {
@@ -336,11 +374,15 @@ class NotificationService {
     final localTimeZone = await _configureLocalTimeZone();
     final wasScheduled = await _appPreferencesService
         .isDailyPracticeReminderScheduled();
+    final storedTime = await _appPreferencesService
+        .getDailyPracticeReminderTime();
+    final currentTime = _formatReminderTime(time);
     final lastTimeZone = await _appPreferencesService.getLastKnownTimeZone();
     final timeZoneChanged =
         localTimeZone != null && localTimeZone != lastTimeZone;
+    final timeChanged = storedTime != currentTime;
 
-    if (!force && wasScheduled && !timeZoneChanged) {
+    if (!force && wasScheduled && !timeZoneChanged && !timeChanged) {
       return;
     }
 
@@ -356,22 +398,25 @@ class NotificationService {
       scheduledFor: scheduledDate.toLocal(),
     );
 
-    await _notificationsPlugin.zonedSchedule(
-      dailyPracticeReminderId,
-      'Practice time',
-      'Spend a few minutes on your interview practice today.',
-      scheduledDate,
-      _notificationDetails(),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
+    await _scheduleZonedNotification(
+      id: dailyPracticeReminderId,
+      title: 'Practice time',
+      body: 'Spend a few minutes on your interview practice today.',
+      scheduledDate: scheduledDate,
       payload: '/practice',
+      matchDateTimeComponents: DateTimeComponents.time,
     );
 
     await _appPreferencesService.setDailyPracticeReminderScheduled(true);
+    await _appPreferencesService.setDailyPracticeReminderTime(currentTime);
     if (localTimeZone != null && localTimeZone.isNotEmpty) {
       await _appPreferencesService.setLastKnownTimeZone(localTimeZone);
     }
+  }
+
+  String _formatReminderTime(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 }
