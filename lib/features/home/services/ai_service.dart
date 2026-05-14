@@ -14,13 +14,79 @@ class AIService {
   static const String _apiKeyFromDefine = String.fromEnvironment(
     'GEMINI_API_KEY',
   );
+  static const String _apiKeysFromDefine = String.fromEnvironment(
+    'GEMINI_API_KEYS',
+  );
 
-  String get _apiKey {
-    final fromEnv = dotenv.env['GEMINI_API_KEY']?.trim() ?? '';
-    if (fromEnv.isNotEmpty) {
-      return fromEnv;
+  List<String> _apiKeys = <String>[];
+  int _apiKeyCursor = 0;
+
+  bool get _hasApiKeys => _resolveApiKeys().isNotEmpty;
+
+  String _cleanApiKey(String raw) {
+    var cleaned = raw.trim();
+    if (cleaned.length >= 2) {
+      if ((cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+          (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+        cleaned = cleaned.substring(1, cleaned.length - 1).trim();
+      }
     }
-    return _apiKeyFromDefine.trim();
+    return cleaned;
+  }
+
+  void _collectApiKeys(String? raw, List<String> target) {
+    if (raw == null || raw.trim().isEmpty) {
+      return;
+    }
+
+    final chunks = raw.split(RegExp(r'[,;\n]'));
+    for (final chunk in chunks) {
+      final cleaned = _cleanApiKey(chunk);
+      if (cleaned.isNotEmpty) {
+        target.add(cleaned);
+      }
+    }
+  }
+
+  List<String> _resolveApiKeys() {
+    if (_apiKeys.isNotEmpty) {
+      return _apiKeys;
+    }
+
+    final keys = <String>[];
+    _collectApiKeys(dotenv.env['GEMINI_API_KEYS'], keys);
+    _collectApiKeys(dotenv.env['GEMINI_API_KEY'], keys);
+
+    final numberedEntries = dotenv.env.entries
+        .where((entry) => entry.key.startsWith('GEMINI_API_KEY_'))
+        .toList();
+    numberedEntries.sort((a, b) => a.key.compareTo(b.key));
+    for (final entry in numberedEntries) {
+      _collectApiKeys(entry.value, keys);
+    }
+
+    _collectApiKeys(_apiKeysFromDefine, keys);
+    _collectApiKeys(_apiKeyFromDefine, keys);
+
+    final seen = <String>{};
+    _apiKeys = keys.where((key) => seen.add(key)).toList();
+    return _apiKeys;
+  }
+
+  List<String> _rotatedApiKeys() {
+    final keys = _resolveApiKeys();
+    if (keys.isEmpty) {
+      return const <String>[];
+    }
+
+    final start = _apiKeyCursor % keys.length;
+    final rotated = <String>[];
+    for (var i = 0; i < keys.length; i++) {
+      rotated.add(keys[(start + i) % keys.length]);
+    }
+
+    _apiKeyCursor = (start + 1) % keys.length;
+    return rotated;
   }
 
   static const List<String> _geminiModels = <String>[
@@ -50,24 +116,67 @@ class AIService {
     return 'No error details returned by Gemini.';
   }
 
+  bool _shouldRotateKey(http.Response response) {
+    if (response.statusCode == 429) {
+      return true;
+    }
+
+    if (response.statusCode == 400 ||
+        response.statusCode == 401 ||
+        response.statusCode == 403) {
+      final message = _extractGeminiError(response).toLowerCase();
+      return message.contains('rate limit') ||
+          message.contains('quota') ||
+          message.contains('resource exhausted') ||
+          message.contains('exceeded') ||
+          message.contains('api key not valid') ||
+          message.contains('invalid api key') ||
+          message.contains('api key expired');
+    }
+
+    return false;
+  }
+
   Future<http.Response> _postToGemini({
     required Map<String, dynamic> body,
   }) async {
     http.Response? lastResponse;
+    final availableKeys = _resolveApiKeys();
+    if (availableKeys.isEmpty) {
+      return http.Response('Gemini API key is not configured.', 500);
+    }
 
     for (final model in _geminiModels) {
       for (var attempt = 0; attempt < 3; attempt++) {
-        final response = await _client.post(
-          Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$_apiKey',
-          ),
-          headers: <String, String>{'Content-Type': 'application/json'},
-          body: jsonEncode(body),
-        );
+        final rotatedKeys = _rotatedApiKeys();
+        for (final apiKey in rotatedKeys) {
+          final response = await _client.post(
+            Uri.parse(
+              'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey',
+            ),
+            headers: <String, String>{'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          );
 
-        // Retry same model on transient rate limits.
-        if (response.statusCode == 429) {
-          lastResponse = response;
+          if (_shouldRotateKey(response)) {
+            lastResponse = response;
+            continue;
+          }
+
+          // Retry next model only when endpoint/model is not found.
+          if (response.statusCode == 404) {
+            lastResponse = response;
+            break;
+          }
+
+          return response;
+        }
+
+        if (lastResponse?.statusCode == 404) {
+          break;
+        }
+
+        if (lastResponse != null && _shouldRotateKey(lastResponse)) {
           if (attempt < 2) {
             final delaySeconds = pow(2, attempt).toInt();
             await Future<void>.delayed(Duration(seconds: delaySeconds));
@@ -75,14 +184,6 @@ class AIService {
           }
           break;
         }
-
-        // Retry next model only when endpoint/model is not found.
-        if (response.statusCode == 404) {
-          lastResponse = response;
-          break;
-        }
-
-        return response;
       }
     }
 
@@ -95,7 +196,7 @@ class AIService {
     required String level,
     required List<String> techStack,
   }) async {
-    if (_apiKey.isEmpty) {
+    if (!_hasApiKeys) {
       throw Exception('Gemini API key is not configured.');
     }
 
@@ -213,7 +314,7 @@ class AIService {
   }
 
   Future<String> generateDailyQuestion(String role, String level) async {
-    if (_apiKey.isEmpty) {
+    if (!_hasApiKeys) {
       throw Exception('Gemini API key is not configured.');
     }
 
@@ -260,7 +361,7 @@ class AIService {
     required List<String> techStack,
     int count = 5,
   }) async {
-    if (_apiKey.isEmpty) {
+    if (!_hasApiKeys) {
       throw Exception('Gemini API key is not configured.');
     }
 
@@ -319,7 +420,7 @@ class AIService {
     required String question,
     required String answer,
   }) async {
-    if (_apiKey.isEmpty) {
+    if (!_hasApiKeys) {
       throw Exception('Gemini API key is not configured.');
     }
 
