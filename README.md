@@ -196,12 +196,12 @@ Explore the main user journey and core platform capabilities.
 | Onboarding       | --> | Practice Session    | --> | Reports & Insights |
 | role/level/stack |     | AI feedback + score |     | averages + history |
 +------------------+     +---------------------+     +--------------------+
-					 |                                |
-					 v                                v
-+------------------+               +------------------------+
-| Paywall / Premium|               | Profile & Preferences  |
-| upgrade options  |               | theme + notifications  |
-+------------------+               +------------------------+
+		|                                                      |
+		v                                                      v
++------------------+                               +------------------------+
+| Paywall / Premium|                               | Profile & Preferences  |
+| upgrade options  |                               | theme + notifications  |
++------------------+                               +------------------------+
 ```
 
 <table>
