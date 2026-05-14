@@ -1,0 +1,51 @@
+<svg width="1200" height="320" viewBox="0 0 1200 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0B1220">
+        <animate attributeName="stop-color" values="#0B1220;#111827;#0B1220" dur="10s" repeatCount="indefinite" />
+      </stop>
+      <stop offset="100%" stop-color="#1D4ED8">
+        <animate attributeName="stop-color" values="#1D4ED8;#22C55E;#1D4ED8" dur="10s" repeatCount="indefinite" />
+      </stop>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#A3E635" stop-opacity="0.8" />
+    </linearGradient>
+    <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="18" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="320" rx="28" fill="url(#bg)" />
+
+  <g opacity="0.45" filter="url(#softGlow)">
+    <circle cx="170" cy="110" r="72" fill="url(#accent)">
+      <animate attributeName="cx" values="170;210;170" dur="12s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="110;90;110" dur="10s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="1030" cy="230" r="92" fill="url(#accent)">
+      <animate attributeName="cx" values="1030;980;1030" dur="14s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="230;200;230" dur="11s" repeatCount="indefinite" />
+    </circle>
+  </g>
+
+  <g opacity="0.18">
+    <path d="M0 240 C 200 210, 400 280, 600 250 S 1000 260, 1200 220" stroke="#FFFFFF" stroke-width="2" fill="none">
+      <animate attributeName="d" dur="12s" repeatCount="indefinite"
+        values="M0 240 C 200 210, 400 280, 600 250 S 1000 260, 1200 220;
+                M0 230 C 220 200, 420 270, 620 240 S 980 250, 1200 210;
+                M0 240 C 200 210, 400 280, 600 250 S 1000 260, 1200 220" />
+    </path>
+  </g>
+
+  <text x="80" y="150" fill="#F8FAFC" font-size="64" font-family="Space Grotesk, Manrope, Segoe UI, sans-serif" font-weight="700">Jahiz</text>
+  <text x="80" y="196" fill="#E2E8F0" font-size="22" font-family="Manrope, Segoe UI, sans-serif">AI interview practice, insights, and premium coaching</text>
+  <rect x="80" y="214" width="260" height="6" rx="3" fill="#38BDF8" opacity="0.85">
+    <animate attributeName="width" values="220;320;220" dur="8s" repeatCount="indefinite" />
+  </rect>
+</svg>
